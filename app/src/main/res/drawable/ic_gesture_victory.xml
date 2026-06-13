@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Peace / Victory sign — two-finger V silhouette -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!--
+      Filled silhouette: palm base with two upward finger bumps (W-top).
+      Index finger peaks at x≈8, middle finger peaks at x≈16, valley at x=12.
+    -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M4,21 L4,9 Q4,5.5 8,5.5 Q12,5.5 12,9 Q12,5.5 16,5.5 Q20,5.5 20,9 L20,21 Q20,23 12,23 Q4,23 4,21 Z" />
+</vector>
