@@ -56,6 +56,9 @@ android {
         compose true
     }
 
+    aaptOptions {
+        noCompress "bin"   // prevent compression of large model files
+    }
 }
 
 // import DownloadMPTasks task
@@ -95,6 +98,7 @@ dependencies {
 
     // Mediapipe Library
     implementation 'com.google.mediapipe:tasks-vision:0.10.21'
+    implementation 'com.google.mediapipe:tasks-genai:0.10.21'
 
     // Jetpack Compose
     def compose_bom = platform('androidx.compose:compose-bom:2024.06.00')

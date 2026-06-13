@@ -1,40 +1,41 @@
-/*
- * Copyright 2022 The TensorFlow Authors. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *             http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package com.signapp
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import android.util.Log
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 data class GestureCandidate(val name: String, val confidence: Float)
+
+enum class LlmPhase { IDLE, TRANSLATING, TRANSLATED, REPLYING, REPLIED }
 
 data class HandyUiState(
     val currentGesture: String = "—",
     val confidence: Float = 0f,
     val candidates: List<GestureCandidate> = emptyList(),
     val sessionWords: List<String> = emptyList(),
-    val gestureCount: Int = 0
+    val gestureCount: Int = 0,
+    // LLM
+    val modelReady: Boolean = false,
+    val modelCopyProgress: Float? = null,   // null = idle, 0..1 = copying in progress
+    val modelError: String? = null,
+    val llmPhase: LlmPhase = LlmPhase.IDLE,
+    val llmTranslation: String = "",
+    val llmReply: String = ""
 ) {
     val sessionText: String
         get() = sessionWords.filter { it.isNotEmpty() }.joinToString(" ")
 }
 
-class MainViewModel : ViewModel() {
+class MainViewModel(application: Application) : AndroidViewModel(application) {
+
+    private val llmHelper = LlmHelper(application)
 
     // Recognition confidence settings
     private var _delegate: Int = SignRecognizerHelper.DELEGATE_CPU
@@ -48,13 +49,37 @@ class MainViewModel : ViewModel() {
     val currentMinHandPresenceConfidence: Float get() = _minHandPresenceConfidence
 
     fun setDelegate(delegate: Int) { _delegate = delegate }
-    fun setMinHandDetectionConfidence(confidence: Float) { _minHandDetectionConfidence = confidence }
-    fun setMinHandTrackingConfidence(confidence: Float) { _minHandTrackingConfidence = confidence }
-    fun setMinHandPresenceConfidence(confidence: Float) { _minHandPresenceConfidence = confidence }
+    fun setMinHandDetectionConfidence(c: Float) { _minHandDetectionConfidence = c }
+    fun setMinHandTrackingConfidence(c: Float) { _minHandTrackingConfidence = c }
+    fun setMinHandPresenceConfidence(c: Float) { _minHandPresenceConfidence = c }
 
     // UI state
     private val _uiState = MutableStateFlow(HandyUiState())
     val uiState: StateFlow<HandyUiState> = _uiState.asStateFlow()
+
+    init {
+        loadModel()
+    }
+
+    private fun loadModel() {
+        viewModelScope.launch(Dispatchers.IO) {
+            _uiState.update { it.copy(modelCopyProgress = 0f) }
+            val ok = llmHelper.initialize { progress ->
+                _uiState.update { it.copy(modelCopyProgress = progress) }
+            }
+            if (ok) {
+                _uiState.update { it.copy(modelReady = true, modelCopyProgress = null, modelError = null) }
+            } else {
+                _uiState.update { it.copy(
+                    modelReady = false,
+                    modelCopyProgress = null,
+                    modelError = "Model file '${LlmHelper.MODEL_FILENAME}' not found in assets"
+                )}
+            }
+        }
+    }
+
+    // ── Gesture recognition ───────────────────────────────────────────────
 
     fun updateRecognitionResult(gesture: String, confidence: Float, candidates: List<GestureCandidate>) {
         _uiState.update { it.copy(currentGesture = gesture, confidence = confidence, candidates = candidates) }
@@ -73,9 +98,8 @@ class MainViewModel : ViewModel() {
 
     fun deleteLastWord() {
         _uiState.update { state ->
-            val newWords = state.sessionWords.dropLastWhile { it.isEmpty() }
-            val trimmed = if (newWords.isNotEmpty()) newWords.dropLast(1) else newWords
-            state.copy(sessionWords = trimmed)
+            val trimmed = state.sessionWords.dropLastWhile { it.isEmpty() }
+            state.copy(sessionWords = if (trimmed.isNotEmpty()) trimmed.dropLast(1) else trimmed)
         }
     }
 
@@ -87,6 +111,54 @@ class MainViewModel : ViewModel() {
     }
 
     fun resetSession() {
-        _uiState.update { HandyUiState() }
+        // Preserve model state across resets
+        _uiState.update { current ->
+            HandyUiState(
+                modelReady = current.modelReady,
+                modelCopyProgress = current.modelCopyProgress,
+                modelError = current.modelError
+            )
+        }
+    }
+
+    // ── LLM ──────────────────────────────────────────────────────────────
+
+    fun translateSession() {
+        val tokens = _uiState.value.sessionWords.filter { it.isNotEmpty() }
+        if (tokens.isEmpty() || !llmHelper.isReady()) return
+
+        _uiState.update { it.copy(
+            llmPhase = LlmPhase.TRANSLATING,
+            llmTranslation = "",
+            llmReply = ""
+        )}
+
+        val prompt = LlmHelper.translatePrompt(tokens)
+        llmHelper.generateAsync(prompt) { partial, done ->
+            _uiState.update { it.copy(
+                llmTranslation = it.llmTranslation + partial,
+                llmPhase = if (done) LlmPhase.TRANSLATED else LlmPhase.TRANSLATING
+            )}
+        }
+    }
+
+    fun generateReply() {
+        val sentence = _uiState.value.llmTranslation.trim()
+        if (sentence.isBlank() || !llmHelper.isReady()) return
+
+        _uiState.update { it.copy(llmPhase = LlmPhase.REPLYING, llmReply = "") }
+
+        val prompt = LlmHelper.replyPrompt(sentence)
+        llmHelper.generateAsync(prompt) { partial, done ->
+            _uiState.update { it.copy(
+                llmReply = it.llmReply + partial,
+                llmPhase = if (done) LlmPhase.REPLIED else LlmPhase.REPLYING
+            )}
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        llmHelper.close()
     }
 }

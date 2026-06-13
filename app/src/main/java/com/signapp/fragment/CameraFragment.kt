@@ -114,7 +114,9 @@ class CameraFragment : Fragment(), SignRecognizerHelper.GestureRecognizerListene
                         onDeleteLastWord = { viewModel.deleteLastWord(); committedGesture = "" },
                         onAddSpace = { viewModel.addSpace() },
                         onCopy = { copyToClipboard(uiState.sessionText) },
-                        onShare = { shareSession(uiState.sessionText) }
+                        onShare = { shareSession(uiState.sessionText) },
+                        onTranslate = { viewModel.translateSession() },
+                        onGenerateReply = { viewModel.generateReply() }
                     )
                 }
             }
