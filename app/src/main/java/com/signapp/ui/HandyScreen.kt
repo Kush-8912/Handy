@@ -72,7 +72,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
-import com.signapp.GestureCandidate
 import com.signapp.HandyUiState
 import com.signapp.LlmPhase
 import com.signapp.OverlayView
@@ -139,8 +138,6 @@ fun HandyScreen(
                 confidence = uiState.confidence,
                 gestureScale = gestureScale.value
             )
-
-            CandidatesCard(candidates = uiState.candidates)
 
             SessionCard(
                 sessionText = uiState.sessionText,
@@ -431,121 +428,6 @@ private fun PredictionCard(
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun CandidatesCard(candidates: List<GestureCandidate>) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(28.dp))
-            .background(HandyColors.Surface)
-            .border(1.dp, HandyColors.Border, RoundedCornerShape(28.dp))
-            .padding(24.dp)
-    ) {
-        Column {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = "TOP CANDIDATES",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = HandyColors.TextSecondary,
-                    letterSpacing = 1.2.sp
-                )
-                Text(
-                    text = "CONFIDENCE",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = HandyColors.TextSecondary,
-                    letterSpacing = 1.2.sp
-                )
-            }
-
-            Spacer(Modifier.height(16.dp))
-
-            if (candidates.isEmpty()) {
-                Text(
-                    text = "Waiting for gesture…",
-                    fontSize = 14.sp,
-                    color = HandyColors.TextSecondary.copy(alpha = 0.45f),
-                    modifier = Modifier.padding(vertical = 8.dp)
-                )
-            } else {
-                candidates.forEachIndexed { i, candidate ->
-                    if (i > 0) Spacer(Modifier.height(18.dp))
-                    CandidateRow(rank = i + 1, candidate = candidate, isTop = i == 0)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun CandidateRow(
-    rank: Int,
-    candidate: GestureCandidate,
-    isTop: Boolean
-) {
-    val animatedProgress by animateFloatAsState(
-        targetValue = candidate.confidence,
-        animationSpec = tween(500),
-        label = "progress$rank"
-    )
-
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Text(
-            text = "$rank",
-            fontSize = 12.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = HandyColors.TextSecondary.copy(alpha = 0.45f),
-            modifier = Modifier.width(14.dp)
-        )
-
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(7.dp)
-        ) {
-            Text(
-                text = candidate.name,
-                fontSize = if (isTop) 15.sp else 14.sp,
-                fontWeight = if (isTop) FontWeight.SemiBold else FontWeight.Normal,
-                color = if (isTop) HandyColors.TextPrimary else HandyColors.TextSecondary
-            )
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(8.dp)
-                    .clip(RoundedCornerShape(999.dp))
-                    .background(HandyColors.ProgressTrack)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxHeight()
-                        .fillMaxWidth(animatedProgress)
-                        .clip(RoundedCornerShape(999.dp))
-                        .background(
-                            if (isTop) HandyColors.Accent
-                            else HandyColors.Accent.copy(alpha = 0.45f)
-                        )
-                )
-            }
-        }
-
-        Text(
-            text = "${(candidate.confidence * 100).toInt()}%",
-            fontSize = 13.sp,
-            fontWeight = if (isTop) FontWeight.Bold else FontWeight.Normal,
-            color = if (isTop) HandyColors.Accent else HandyColors.TextSecondary,
-            modifier = Modifier.width(38.dp)
-        )
     }
 }
 
@@ -887,12 +769,6 @@ private fun HandyScreenPreview() {
             uiState = HandyUiState(
                 currentGesture = "Victory",
                 confidence = 0.98f,
-                candidates = listOf(
-                    GestureCandidate("Victory", 0.98f),
-                    GestureCandidate("Open Palm", 0.82f),
-                    GestureCandidate("Thumb Up", 0.65f),
-                    GestureCandidate("Closed Fist", 0.42f),
-                ),
                 sessionWords = listOf("Victory", "Open Palm"),
                 gestureCount = 7
             ),

@@ -11,14 +11,11 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-data class GestureCandidate(val name: String, val confidence: Float)
-
 enum class LlmPhase { IDLE, TRANSLATING, TRANSLATED, REPLYING, REPLIED }
 
 data class HandyUiState(
     val currentGesture: String = "—",
     val confidence: Float = 0f,
-    val candidates: List<GestureCandidate> = emptyList(),
     val sessionWords: List<String> = emptyList(),
     val gestureCount: Int = 0,
     // LLM
@@ -81,12 +78,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     // ── Gesture recognition ───────────────────────────────────────────────
 
-    fun updateRecognitionResult(gesture: String, confidence: Float, candidates: List<GestureCandidate>) {
-        _uiState.update { it.copy(currentGesture = gesture, confidence = confidence, candidates = candidates) }
+    fun updateRecognitionResult(gesture: String, confidence: Float) {
+        _uiState.update { it.copy(currentGesture = gesture, confidence = confidence) }
     }
 
     fun clearRecognition() {
-        _uiState.update { it.copy(currentGesture = "—", confidence = 0f, candidates = emptyList()) }
+        _uiState.update { it.copy(currentGesture = "—", confidence = 0f) }
     }
 
     fun commitGestureToSession(word: String) {
