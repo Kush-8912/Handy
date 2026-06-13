@@ -6,121 +6,157 @@
     android:layout_height="match_parent"
     android:background="@color/deep_black">
 
+    <!-- Full-screen camera preview -->
     <androidx.camera.view.PreviewView
         android:id="@+id/view_finder"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
+    <!-- Hand skeleton overlay -->
     <com.signapp.OverlayView
         android:id="@+id/overlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
+    <!-- Commit flash -->
     <View
         android:id="@+id/flash_overlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:alpha="0"
-        android:background="@color/neon_purple"
+        android:background="@color/accent"
         android:clickable="false"
         android:focusable="false" />
 
-    <!-- Top glass bar -->
+    <!-- ═══════════════════════════════════════════════
+         TOP BAR
+         ═══════════════════════════════════════════════ -->
     <LinearLayout
         android:id="@+id/top_bar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@drawable/bg_glass_panel"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:paddingHorizontal="16dp"
-        android:paddingVertical="12dp"
+        android:background="@color/panel"
+        android:orientation="vertical"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
-        <TextView
-            android:layout_width="0dp"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:fontFamily="sans-serif-black"
-            android:letterSpacing="0.12"
-            android:shadowColor="@color/neon_purple"
-            android:shadowDx="0"
-            android:shadowDy="0"
-            android:shadowRadius="16"
-            android:text="HANDY"
-            android:textColor="@color/neon_purple"
-            android:textSize="22sp"
-            android:textStyle="bold" />
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="20dp"
+            android:paddingEnd="16dp"
+            android:paddingTop="14dp"
+            android:paddingBottom="14dp">
 
-        <TextView
-            android:id="@+id/counter_badge"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="12dp"
-            android:background="@drawable/bg_chip"
-            android:paddingHorizontal="12dp"
-            android:paddingVertical="5dp"
-            android:text="0 signs"
-            android:textColor="@color/neon_cyan"
-            android:textSize="12sp"
-            android:textStyle="bold" />
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:fontFamily="sans-serif-black"
+                android:letterSpacing="0.20"
+                android:shadowColor="@color/accent"
+                android:shadowDx="0"
+                android:shadowDy="0"
+                android:shadowRadius="12"
+                android:text="HANDY"
+                android:textColor="@color/text_primary"
+                android:textSize="18sp"
+                android:textStyle="bold" />
 
-        <ImageButton
-            android:id="@+id/camera_switch_button"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Switch camera"
-            android:src="@drawable/baseline_cameraswitch_24"
-            android:tint="@color/text_primary" />
+            <TextView
+                android:id="@+id/counter_badge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="14dp"
+                android:background="@drawable/bg_chip"
+                android:paddingHorizontal="10dp"
+                android:paddingVertical="4dp"
+                android:text="0 SIGNS"
+                android:textColor="@color/accent"
+                android:textSize="10sp"
+                android:letterSpacing="0.12"
+                android:textStyle="bold" />
+
+            <ImageButton
+                android:id="@+id/camera_switch_button"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Switch camera"
+                android:src="@drawable/baseline_cameraswitch_24"
+                android:tint="@color/text_primary" />
+        </LinearLayout>
+
+        <!-- Bottom border line -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@color/divider" />
     </LinearLayout>
 
-    <!-- Gesture label — floating center, part of vertical chain -->
-    <TextView
-        android:id="@+id/gesture_text_view"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:fontFamily="sans-serif-black"
-        android:shadowColor="@color/neon_purple"
-        android:shadowDx="0"
-        android:shadowDy="0"
-        android:shadowRadius="28"
-        android:text="…"
-        android:textColor="@color/text_primary"
-        android:textSize="80sp"
-        android:textStyle="bold"
-        app:layout_constraintBottom_toTopOf="@id/confidence_bar"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/top_bar"
-        app:layout_constraintVertical_bias="0.45"
-        app:layout_constraintVertical_chainStyle="packed" />
-
-    <!-- Confidence bar — just below gesture text -->
-    <ProgressBar
-        android:id="@+id/confidence_bar"
-        style="?android:attr/progressBarStyleHorizontal"
-        android:layout_width="0dp"
-        android:layout_height="6dp"
-        android:layout_marginHorizontal="60dp"
-        android:layout_marginTop="8dp"
-        android:max="100"
-        android:progress="0"
-        android:progressDrawable="@drawable/bg_confidence_bar"
+    <!-- ═══════════════════════════════════════════════
+         CENTER ZONE — gesture label + confidence
+         Fills all space between top_bar and history_scroll
+         ═══════════════════════════════════════════════ -->
+    <LinearLayout
+        android:id="@+id/gesture_container"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:paddingHorizontal="16dp"
         app:layout_constraintBottom_toTopOf="@id/history_scroll"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/gesture_text_view" />
+        app:layout_constraintTop_toBottomOf="@id/top_bar">
 
-    <!-- History chips strip -->
+        <!-- Live detected gesture — auto-sizes so it never overflows -->
+        <TextView
+            android:id="@+id/gesture_text_view"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:autoSizeMaxTextSize="72sp"
+            android:autoSizeMinTextSize="18sp"
+            android:autoSizeStepGranularity="2sp"
+            android:autoSizeTextType="uniform"
+            android:ellipsize="end"
+            android:fontFamily="sans-serif-black"
+            android:gravity="center"
+            android:maxLines="1"
+            android:shadowColor="@color/accent"
+            android:shadowDx="0"
+            android:shadowDy="0"
+            android:shadowRadius="24"
+            android:text="…"
+            android:textColor="@color/text_primary"
+            android:textSize="72sp"
+            android:textStyle="bold" />
+
+        <!-- Confidence bar — thin clean line -->
+        <ProgressBar
+            android:id="@+id/confidence_bar"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="160dp"
+            android:layout_height="3dp"
+            android:layout_marginTop="16dp"
+            android:max="100"
+            android:progress="0"
+            android:progressDrawable="@drawable/bg_confidence_bar" />
+
+    </LinearLayout>
+
+    <!-- ═══════════════════════════════════════════════
+         HISTORY CHIPS — anchored just above bottom panel
+         ═══════════════════════════════════════════════ -->
     <HorizontalScrollView
         android:id="@+id/history_scroll"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:paddingHorizontal="12dp"
-        android:paddingVertical="6dp"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="8dp"
         android:scrollbars="none"
         app:layout_constraintBottom_toTopOf="@id/bottom_panel"
         app:layout_constraintEnd_toEndOf="parent"
@@ -134,24 +170,27 @@
             android:orientation="horizontal" />
     </HorizontalScrollView>
 
-    <!-- Bottom glass panel -->
+    <!-- ═══════════════════════════════════════════════
+         BOTTOM PANEL
+         ═══════════════════════════════════════════════ -->
     <LinearLayout
         android:id="@+id/bottom_panel"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@drawable/bg_glass_panel"
+        android:background="@color/panel"
         android:orientation="vertical"
-        android:paddingBottom="24dp"
+        android:paddingBottom="28dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent">
 
-        <!-- 1dp top divider line -->
+        <!-- Top border line -->
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:background="#447C4DFF" />
+            android:background="@color/divider" />
 
+        <!-- Sentence output -->
         <TextView
             android:id="@+id/subtitle_text"
             android:layout_width="match_parent"
@@ -159,92 +198,97 @@
             android:ellipsize="start"
             android:fontFamily="sans-serif-medium"
             android:gravity="center_vertical"
-            android:hint="Make a sign to begin…"
+            android:hint="MAKE A SIGN TO BEGIN"
             android:maxLines="2"
-            android:minHeight="56dp"
-            android:paddingHorizontal="16dp"
-            android:paddingTop="10dp"
+            android:minHeight="52dp"
+            android:paddingHorizontal="20dp"
+            android:paddingTop="12dp"
             android:paddingBottom="4dp"
             android:textColor="@color/text_primary"
             android:textColorHint="@color/text_hint"
-            android:textSize="26sp"
-            android:textStyle="bold" />
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.04" />
 
+        <!-- Action buttons row -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center"
             android:orientation="horizontal"
-            android:paddingHorizontal="8dp"
-            android:paddingTop="8dp">
+            android:paddingHorizontal="12dp"
+            android:paddingTop="10dp">
 
+            <!-- Clear all -->
             <ImageButton
                 android:id="@+id/delete_button"
-                android:layout_width="54dp"
-                android:layout_height="48dp"
-                android:layout_marginHorizontal="5dp"
+                android:layout_width="52dp"
+                android:layout_height="44dp"
+                android:layout_marginHorizontal="4dp"
                 android:background="@drawable/bg_neon_button"
                 android:contentDescription="Clear all"
                 android:src="@drawable/baseline_delete_forever_24"
-                android:tint="@color/neon_pink" />
+                android:tint="@color/danger" />
 
+            <!-- Delete last word -->
             <ImageButton
                 android:id="@+id/back_button"
-                android:layout_width="54dp"
-                android:layout_height="48dp"
-                android:layout_marginHorizontal="5dp"
+                android:layout_width="52dp"
+                android:layout_height="44dp"
+                android:layout_marginHorizontal="4dp"
                 android:background="@drawable/bg_neon_button"
                 android:contentDescription="Delete last word"
                 android:src="@drawable/baseline_arrow_back_24"
                 android:tint="@color/text_primary" />
 
+            <!-- Space -->
             <Button
                 android:id="@+id/space_button"
-                android:layout_width="54dp"
-                android:layout_height="48dp"
-                android:layout_marginHorizontal="5dp"
+                android:layout_width="52dp"
+                android:layout_height="44dp"
+                android:layout_marginHorizontal="4dp"
                 android:background="@drawable/bg_neon_button"
                 android:contentDescription="Add space"
                 android:text="SP"
                 android:textColor="@color/text_secondary"
-                android:textSize="13sp"
+                android:textSize="11sp"
+                android:letterSpacing="0.10"
                 android:textStyle="bold" />
 
+            <!-- Copy -->
             <ImageButton
                 android:id="@+id/copy_button"
-                android:layout_width="54dp"
-                android:layout_height="48dp"
-                android:layout_marginHorizontal="5dp"
+                android:layout_width="52dp"
+                android:layout_height="44dp"
+                android:layout_marginHorizontal="4dp"
                 android:background="@drawable/bg_neon_button"
                 android:contentDescription="Copy text"
                 android:src="@drawable/ic_copy"
-                android:tint="@color/neon_cyan" />
+                android:tint="@color/text_primary" />
 
+            <!-- Share -->
             <ImageButton
                 android:id="@+id/share_button"
-                android:layout_width="54dp"
-                android:layout_height="48dp"
-                android:layout_marginHorizontal="5dp"
+                android:layout_width="52dp"
+                android:layout_height="44dp"
+                android:layout_marginHorizontal="4dp"
                 android:background="@drawable/bg_neon_button"
                 android:contentDescription="Share sentence"
                 android:src="@drawable/ic_share"
-                android:tint="@color/neon_green" />
+                android:tint="@color/text_primary" />
+
+            <!-- Speak all — accent circle -->
+            <ImageButton
+                android:id="@+id/fab_speak"
+                android:layout_width="52dp"
+                android:layout_height="44dp"
+                android:layout_marginHorizontal="4dp"
+                android:background="@color/accent"
+                android:contentDescription="Speak sentence"
+                android:src="@drawable/ic_volume_up"
+                android:tint="@color/deep_black" />
 
         </LinearLayout>
     </LinearLayout>
-
-    <!-- Speak-all FAB -->
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/fab_speak"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginEnd="16dp"
-        android:layout_marginBottom="12dp"
-        android:contentDescription="Speak sentence"
-        android:src="@drawable/ic_volume_up"
-        app:backgroundTint="@color/neon_purple"
-        app:layout_constraintBottom_toTopOf="@id/bottom_panel"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:tint="@color/text_primary" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

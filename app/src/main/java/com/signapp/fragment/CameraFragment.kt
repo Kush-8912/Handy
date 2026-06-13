@@ -132,7 +132,7 @@ class CameraFragment : Fragment(), SignRecognizerHelper.GestureRecognizerListene
             binding.subtitleText.text = ""
             binding.historyChipsContainer.removeAllViews()
             totalGestureCount = 0
-            binding.counterBadge.text = "0 signs"
+            binding.counterBadge.text = "0 SIGNS"
             resetStability()
         }
 
@@ -192,6 +192,9 @@ class CameraFragment : Fragment(), SignRecognizerHelper.GestureRecognizerListene
                 return@setOnClickListener
             }
             if (ttsReady) tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, null)
+            binding.fabSpeak.animate().scaleX(0.88f).scaleY(0.88f).setDuration(80)
+                .withEndAction { binding.fabSpeak.animate().scaleX(1f).scaleY(1f).setDuration(120).start() }
+                .start()
         }
     }
 
@@ -296,7 +299,7 @@ class CameraFragment : Fragment(), SignRecognizerHelper.GestureRecognizerListene
         playCommitFlash()
         binding.root.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
         totalGestureCount++
-        binding.counterBadge.text = "$totalGestureCount signs"
+        binding.counterBadge.text = "$totalGestureCount SIGNS"
     }
 
     private fun addToHistory(label: String) {
