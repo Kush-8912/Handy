@@ -1,30 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-    ~ Copyright 2022 The TensorFlow Authors. All Rights Reserved.
-    ~
-    ~ Licensed under the Apache License, Version 2.0 (the "License");
-    ~ you may not use this file except in compliance with the License.
-    ~ You may obtain a copy of the License at
-    ~
-    ~       http://www.apache.org/licenses/LICENSE-2.0
-    ~
-    ~ Unless required by applicable law or agreed to in writing, software
-    ~ distributed under the License is distributed on an "AS IS" BASIS,
-    ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    ~ See the License for the specific language governing permissions and
-    ~ limitations under the License.
--->
 <resources>
-    <color name="mp_color_primary">#2B2B2B</color>
-    <color name="mp_color_primary_variant">#6F12CB</color>
-    <color name="mp_color_focused">#1265CB</color>
-    <color name="mp_color_primary_dark">#50006D</color>
-    <color name="mp_color_secondary">#FBBC04</color>
-    <color name="mp_color_secondary_variant">#F9AB00</color>
-    <color name="mp_color_error">#B00020</color>
-    <color name="toolbar_background">#2B2B2B</color>
-    <color name="bottom_sheet_background">#838383</color>
-    <color name="bottom_sheet_text_color">@android:color/black</color>
+    <color name="neon_purple">#7C4DFF</color>
+    <color name="neon_cyan">#00E5FF</color>
+    <color name="neon_pink">#FF4081</color>
+    <color name="neon_green">#00E676</color>
+    <color name="neon_gold">#FFD600</color>
+    <color name="deep_black">#080810</color>
+    <color name="surface_dark">#0E0E1E</color>
+    <color name="text_primary">#FFFFFF</color>
+    <color name="text_secondary">#B0B0CC</color>
+    <color name="text_hint">#505070</color>
+    <!-- Keep legacy names used by styles/themes -->
+    <color name="mp_color_primary">#0E0E1E</color>
+    <color name="mp_color_primary_variant">#7C4DFF</color>
+    <color name="mp_color_focused">#00E5FF</color>
+    <color name="mp_color_primary_dark">#080810</color>
+    <color name="mp_color_secondary">#FF4081</color>
+    <color name="mp_color_secondary_variant">#FF4081</color>
+    <color name="mp_color_error">#FF1744</color>
+    <color name="toolbar_background">#0E0E1E</color>
+    <color name="bottom_sheet_background">#1A1A2E</color>
+    <color name="bottom_sheet_text_color">#FFFFFF</color>
     <color name="icActive">#FFFFFFFF</color>
     <color name="icFocused">#DDFFFFFF</color>
     <color name="icPressed">#AAFFFFFF</color>
