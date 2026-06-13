@@ -29,7 +29,6 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.mediapipe.tasks.vision.gesturerecognizer.GestureRecognizerResult
-import com.signapp.GestureCandidate
 import com.signapp.MainViewModel
 import com.signapp.OverlayView
 import com.signapp.SignRecognizerHelper
@@ -70,9 +69,6 @@ class CameraFragment : Fragment(), SignRecognizerHelper.GestureRecognizerListene
     private var gestureCount = 0
     private val stabilityThreshold = 4
     private var committedGesture = ""
-
-    // Rolling pool of recent unique detections → populates Top Candidates
-    private val recentGestures = LinkedHashMap<String, Float>()
 
     override fun onResume() {
         super.onResume()
@@ -161,7 +157,6 @@ class CameraFragment : Fragment(), SignRecognizerHelper.GestureRecognizerListene
     private fun resetSession() {
         viewModel.resetSession()
         committedGesture = ""
-        recentGestures.clear()
         resetStability()
         overlayView.clear()
     }
@@ -251,18 +246,7 @@ class CameraFragment : Fragment(), SignRecognizerHelper.GestureRecognizerListene
             if (gesture != "none" && gesture != "None") {
                 val label = formatGestureName(gesture)
 
-                // Add to rolling pool (most recent at end, max 4 unique gestures)
-                recentGestures.remove(label)
-                recentGestures[label] = confidence
-                if (recentGestures.size > 4) recentGestures.remove(recentGestures.keys.first())
-
-                // Current gesture first, then remaining recent ones by confidence
-                val candidates = recentGestures.entries
-                    .toList()
-                    .reversed()
-                    .map { GestureCandidate(it.key, it.value) }
-
-                viewModel.updateRecognitionResult(label, confidence, candidates)
+                viewModel.updateRecognitionResult(label, confidence)
 
                 overlayView.setResults(result, resultBundle.inputImageHeight, resultBundle.inputImageWidth)
 
@@ -277,7 +261,6 @@ class CameraFragment : Fragment(), SignRecognizerHelper.GestureRecognizerListene
                 viewModel.clearRecognition()
                 overlayView.clear()
                 committedGesture = ""
-                recentGestures.clear()
                 resetStability()
             }
         }
