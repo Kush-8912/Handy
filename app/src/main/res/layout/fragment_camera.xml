@@ -4,41 +4,67 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#000000">
+    android:background="@color/deep_black">
 
-    <!-- Camera preview fills the screen -->
     <androidx.camera.view.PreviewView
         android:id="@+id/view_finder"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
-    <!-- Hand landmark overlay -->
     <com.signapp.OverlayView
         android:id="@+id/overlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
-    <!-- Top bar -->
+    <View
+        android:id="@+id/flash_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:alpha="0"
+        android:background="@color/neon_purple"
+        android:clickable="false"
+        android:focusable="false" />
+
+    <!-- Top glass bar -->
     <LinearLayout
         android:id="@+id/top_bar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="#CC000000"
+        android:background="@drawable/bg_glass_panel"
         android:gravity="center_vertical"
         android:orientation="horizontal"
         android:paddingHorizontal="16dp"
-        android:paddingVertical="8dp"
-        app:layout_constraintTop_toTopOf="parent"
+        android:paddingVertical="12dp"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
+        app:layout_constraintTop_toTopOf="parent">
 
         <TextView
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Handy"
-            android:textColor="#FFFFFF"
-            android:textSize="18sp"
+            android:fontFamily="sans-serif-black"
+            android:letterSpacing="0.12"
+            android:shadowColor="@color/neon_purple"
+            android:shadowDx="0"
+            android:shadowDy="0"
+            android:shadowRadius="16"
+            android:text="HANDY"
+            android:textColor="@color/neon_purple"
+            android:textSize="22sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/counter_badge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="12dp"
+            android:background="@drawable/bg_chip"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="5dp"
+            android:text="0 signs"
+            android:textColor="@color/neon_cyan"
+            android:textSize="12sp"
             android:textStyle="bold" />
 
         <ImageButton
@@ -46,98 +72,179 @@
             android:layout_width="40dp"
             android:layout_height="40dp"
             android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Switch camera"
             android:src="@drawable/baseline_cameraswitch_24"
-            android:tint="#FFFFFF"
-            android:contentDescription="Switch camera" />
+            android:tint="@color/text_primary" />
     </LinearLayout>
 
-    <!-- Current detected sign — large, centered -->
+    <!-- Gesture label — floating center, part of vertical chain -->
     <TextView
         android:id="@+id/gesture_text_view"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:background="#CC000000"
-        android:paddingHorizontal="24dp"
-        android:paddingVertical="12dp"
+        android:fontFamily="sans-serif-black"
+        android:shadowColor="@color/neon_purple"
+        android:shadowDx="0"
+        android:shadowDy="0"
+        android:shadowRadius="28"
         android:text="…"
-        android:textColor="#FFFFFF"
-        android:textSize="64sp"
+        android:textColor="@color/text_primary"
+        android:textSize="80sp"
         android:textStyle="bold"
-        app:layout_constraintBottom_toTopOf="@id/bottom_panel"
+        app:layout_constraintBottom_toTopOf="@id/confidence_bar"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/top_bar" />
+        app:layout_constraintTop_toBottomOf="@id/top_bar"
+        app:layout_constraintVertical_bias="0.45"
+        app:layout_constraintVertical_chainStyle="packed" />
 
-    <!-- Bottom panel: sentence + buttons -->
+    <!-- Confidence bar — just below gesture text -->
+    <ProgressBar
+        android:id="@+id/confidence_bar"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="0dp"
+        android:layout_height="6dp"
+        android:layout_marginHorizontal="60dp"
+        android:layout_marginTop="8dp"
+        android:max="100"
+        android:progress="0"
+        android:progressDrawable="@drawable/bg_confidence_bar"
+        app:layout_constraintBottom_toTopOf="@id/history_scroll"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/gesture_text_view" />
+
+    <!-- History chips strip -->
+    <HorizontalScrollView
+        android:id="@+id/history_scroll"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingHorizontal="12dp"
+        android:paddingVertical="6dp"
+        android:scrollbars="none"
+        app:layout_constraintBottom_toTopOf="@id/bottom_panel"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <LinearLayout
+            android:id="@+id/history_chips_container"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal" />
+    </HorizontalScrollView>
+
+    <!-- Bottom glass panel -->
     <LinearLayout
         android:id="@+id/bottom_panel"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="#CC000000"
+        android:background="@drawable/bg_glass_panel"
         android:orientation="vertical"
-        android:paddingBottom="16dp"
+        android:paddingBottom="24dp"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
 
-        <!-- Sentence built from recognized signs -->
+        <!-- 1dp top divider line -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#447C4DFF" />
+
         <TextView
             android:id="@+id/subtitle_text"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:minHeight="56dp"
+            android:ellipsize="start"
+            android:fontFamily="sans-serif-medium"
             android:gravity="center_vertical"
-            android:paddingHorizontal="16dp"
-            android:paddingVertical="8dp"
-            android:textColor="#FFFFFF"
-            android:textSize="28sp"
-            android:textStyle="bold"
-            android:hint="Recognized text will appear here"
-            android:textColorHint="#80FFFFFF"
+            android:hint="Make a sign to begin…"
             android:maxLines="2"
-            android:ellipsize="start" />
+            android:minHeight="56dp"
+            android:paddingHorizontal="16dp"
+            android:paddingTop="10dp"
+            android:paddingBottom="4dp"
+            android:textColor="@color/text_primary"
+            android:textColorHint="@color/text_hint"
+            android:textSize="26sp"
+            android:textStyle="bold" />
 
-        <!-- Action buttons -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center"
             android:orientation="horizontal"
+            android:paddingHorizontal="8dp"
             android:paddingTop="8dp">
 
             <ImageButton
                 android:id="@+id/delete_button"
-                android:layout_width="64dp"
-                android:layout_height="52dp"
-                android:layout_marginHorizontal="12dp"
-                android:background="@drawable/button_background"
+                android:layout_width="54dp"
+                android:layout_height="48dp"
+                android:layout_marginHorizontal="5dp"
+                android:background="@drawable/bg_neon_button"
+                android:contentDescription="Clear all"
                 android:src="@drawable/baseline_delete_forever_24"
-                android:tint="#FFFFFF"
-                android:contentDescription="Clear all" />
+                android:tint="@color/neon_pink" />
 
             <ImageButton
                 android:id="@+id/back_button"
-                android:layout_width="64dp"
-                android:layout_height="52dp"
-                android:layout_marginHorizontal="12dp"
-                android:background="@drawable/button_background"
+                android:layout_width="54dp"
+                android:layout_height="48dp"
+                android:layout_marginHorizontal="5dp"
+                android:background="@drawable/bg_neon_button"
+                android:contentDescription="Delete last word"
                 android:src="@drawable/baseline_arrow_back_24"
-                android:tint="#FFFFFF"
-                android:contentDescription="Delete last character" />
+                android:tint="@color/text_primary" />
 
             <Button
                 android:id="@+id/space_button"
-                android:layout_width="64dp"
-                android:layout_height="52dp"
-                android:layout_marginHorizontal="12dp"
-                android:background="@drawable/button_background"
+                android:layout_width="54dp"
+                android:layout_height="48dp"
+                android:layout_marginHorizontal="5dp"
+                android:background="@drawable/bg_neon_button"
+                android:contentDescription="Add space"
                 android:text="SP"
-                android:textColor="#FFFFFF"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:contentDescription="Add space" />
+                android:textColor="@color/text_secondary"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <ImageButton
+                android:id="@+id/copy_button"
+                android:layout_width="54dp"
+                android:layout_height="48dp"
+                android:layout_marginHorizontal="5dp"
+                android:background="@drawable/bg_neon_button"
+                android:contentDescription="Copy text"
+                android:src="@drawable/ic_copy"
+                android:tint="@color/neon_cyan" />
+
+            <ImageButton
+                android:id="@+id/share_button"
+                android:layout_width="54dp"
+                android:layout_height="48dp"
+                android:layout_marginHorizontal="5dp"
+                android:background="@drawable/bg_neon_button"
+                android:contentDescription="Share sentence"
+                android:src="@drawable/ic_share"
+                android:tint="@color/neon_green" />
 
         </LinearLayout>
     </LinearLayout>
+
+    <!-- Speak-all FAB -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fab_speak"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="12dp"
+        android:contentDescription="Speak sentence"
+        android:src="@drawable/ic_volume_up"
+        app:backgroundTint="@color/neon_purple"
+        app:layout_constraintBottom_toTopOf="@id/bottom_panel"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:tint="@color/text_primary" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
