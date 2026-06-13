@@ -84,7 +84,6 @@ fun HandyScreen(
     onSpeak: () -> Unit,
     onCameraSwitch: () -> Unit,
     onDeleteLastWord: () -> Unit,
-    onAddSpace: () -> Unit,
     onCopy: () -> Unit,
     onShare: () -> Unit,
     onTranslate: () -> Unit = {},
@@ -153,7 +152,6 @@ fun HandyScreen(
                 onReset = onReset,
                 onSpeak = onSpeak,
                 onDeleteLastWord = onDeleteLastWord,
-                onAddSpace = onAddSpace,
                 onCopy = onCopy,
                 onShare = onShare
             )
@@ -482,7 +480,6 @@ private fun ActionsRow(
     onReset: () -> Unit,
     onSpeak: () -> Unit,
     onDeleteLastWord: () -> Unit,
-    onAddSpace: () -> Unit,
     onCopy: () -> Unit,
     onShare: () -> Unit
 ) {
@@ -558,10 +555,6 @@ private fun ActionsRow(
                 DropdownMenuItem(
                     text = { Text("Delete last word", color = HandyColors.TextPrimary, fontSize = 14.sp) },
                     onClick = { onDeleteLastWord(); showMenu = false }
-                )
-                DropdownMenuItem(
-                    text = { Text("Add space", color = HandyColors.TextPrimary, fontSize = 14.sp) },
-                    onClick = { onAddSpace(); showMenu = false }
                 )
                 DropdownMenuItem(
                     text = { Text("Copy session", color = HandyColors.TextPrimary, fontSize = 14.sp) },
@@ -781,7 +774,6 @@ private fun HandyScreenPreview() {
             onSpeak = {},
             onCameraSwitch = {},
             onDeleteLastWord = {},
-            onAddSpace = {},
             onCopy = {},
             onShare = {}
         )
@@ -806,7 +798,6 @@ private fun HandyScreenIdlePreview() {
             onSpeak = {},
             onCameraSwitch = {},
             onDeleteLastWord = {},
-            onAddSpace = {},
             onCopy = {},
             onShare = {}
         )

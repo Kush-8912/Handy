@@ -100,13 +100,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun addSpace() {
-        _uiState.update { state ->
-            if (state.sessionWords.isEmpty()) state
-            else state.copy(sessionWords = state.sessionWords + "")
-        }
-    }
-
     fun resetSession() {
         // Preserve model state across resets
         _uiState.update { current ->
