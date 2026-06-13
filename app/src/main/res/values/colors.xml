@@ -1,25 +1,39 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="neon_purple">#7C4DFF</color>
-    <color name="neon_cyan">#00E5FF</color>
-    <color name="neon_pink">#FF4081</color>
-    <color name="neon_green">#00E676</color>
-    <color name="neon_gold">#FFD600</color>
-    <color name="deep_black">#080810</color>
-    <color name="surface_dark">#0E0E1E</color>
+    <!-- Primary accent — electric cyan -->
+    <color name="accent">#00D4FF</color>
+    <color name="accent_dim">#1A00D4FF</color>
+    <color name="accent_mid">#4000D4FF</color>
+
+    <!-- Danger -->
+    <color name="danger">#FF3B30</color>
+
+    <!-- Backgrounds -->
+    <color name="deep_black">#000000</color>
+    <color name="panel">#0A0A0A</color>
+    <color name="divider">#1AFFFFFF</color>
+
+    <!-- Text -->
     <color name="text_primary">#FFFFFF</color>
-    <color name="text_secondary">#B0B0CC</color>
-    <color name="text_hint">#505070</color>
-    <!-- Keep legacy names used by styles/themes -->
-    <color name="mp_color_primary">#0E0E1E</color>
-    <color name="mp_color_primary_variant">#7C4DFF</color>
-    <color name="mp_color_focused">#00E5FF</color>
-    <color name="mp_color_primary_dark">#080810</color>
-    <color name="mp_color_secondary">#FF4081</color>
-    <color name="mp_color_secondary_variant">#FF4081</color>
-    <color name="mp_color_error">#FF1744</color>
-    <color name="toolbar_background">#0E0E1E</color>
-    <color name="bottom_sheet_background">#1A1A2E</color>
+    <color name="text_secondary">#666666</color>
+    <color name="text_hint">#333333</color>
+
+    <!-- Legacy aliases (referenced by styles/themes) -->
+    <color name="neon_purple">#00D4FF</color>
+    <color name="neon_cyan">#00D4FF</color>
+    <color name="neon_pink">#FF3B30</color>
+    <color name="neon_green">#00D4FF</color>
+    <color name="neon_gold">#00D4FF</color>
+    <color name="surface_dark">#0A0A0A</color>
+    <color name="mp_color_primary">#000000</color>
+    <color name="mp_color_primary_variant">#00D4FF</color>
+    <color name="mp_color_focused">#00D4FF</color>
+    <color name="mp_color_primary_dark">#000000</color>
+    <color name="mp_color_secondary">#FF3B30</color>
+    <color name="mp_color_secondary_variant">#FF3B30</color>
+    <color name="mp_color_error">#FF3B30</color>
+    <color name="toolbar_background">#000000</color>
+    <color name="bottom_sheet_background">#0A0A0A</color>
     <color name="bottom_sheet_text_color">#FFFFFF</color>
     <color name="icActive">#FFFFFFFF</color>
     <color name="icFocused">#DDFFFFFF</color>
