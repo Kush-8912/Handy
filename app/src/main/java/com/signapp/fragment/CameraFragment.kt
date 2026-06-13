@@ -3,6 +3,8 @@ package com.signapp.fragment
 import android.annotation.SuppressLint
 import android.content.res.Configuration
 import android.os.Bundle
+import android.speech.tts.TextToSpeech
+import android.util.Log
 import android.util.Size
 import android.view.LayoutInflater
 import android.view.View
@@ -16,6 +18,7 @@ import androidx.fragment.app.activityViewModels
 import com.signapp.SignRecognizerHelper
 import com.signapp.MainViewModel
 import com.signapp.databinding.FragmentCameraBinding
+import java.util.Locale
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -35,6 +38,8 @@ class CameraFragment : Fragment(), SignRecognizerHelper.GestureRecognizerListene
     private var cameraFacing = CameraSelector.LENS_FACING_FRONT
 
     private lateinit var backgroundExecutor: ExecutorService
+    private lateinit var tts: TextToSpeech
+    private var ttsReady = false
 
     private val sentence = StringBuilder()
 
@@ -63,6 +68,8 @@ class CameraFragment : Fragment(), SignRecognizerHelper.GestureRecognizerListene
         super.onDestroyView()
         backgroundExecutor.shutdown()
         backgroundExecutor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS)
+        tts.stop()
+        tts.shutdown()
     }
 
     override fun onCreateView(
@@ -77,6 +84,15 @@ class CameraFragment : Fragment(), SignRecognizerHelper.GestureRecognizerListene
         super.onViewCreated(view, savedInstanceState)
 
         backgroundExecutor = Executors.newSingleThreadExecutor()
+
+        tts = TextToSpeech(requireContext()) { status ->
+            if (status == TextToSpeech.SUCCESS) {
+                tts.language = Locale.US
+                ttsReady = true
+            } else {
+                Log.e(TAG, "TTS init failed with status $status")
+            }
+        }
 
         backgroundExecutor.execute {
             gestureRecognizerHelper = SignRecognizerHelper(
@@ -220,6 +236,7 @@ class CameraFragment : Fragment(), SignRecognizerHelper.GestureRecognizerListene
             sentence.append(label)
             binding.subtitleText.text = sentence.toString()
         }
+        if (ttsReady) tts.speak(label, TextToSpeech.QUEUE_FLUSH, null, null)
         // Leave gestureCount at stabilityThreshold so == check never fires again
         // until a different gesture resets lastGesture.
     }
