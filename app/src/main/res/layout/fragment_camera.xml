@@ -4,291 +4,343 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/deep_black">
+    android:background="@color/bg">
 
-    <!-- Full-screen camera preview -->
-    <androidx.camera.view.PreviewView
-        android:id="@+id/view_finder"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent" />
-
-    <!-- Hand skeleton overlay -->
-    <com.signapp.OverlayView
-        android:id="@+id/overlay"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent" />
-
-    <!-- Commit flash -->
-    <View
-        android:id="@+id/flash_overlay"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:alpha="0"
-        android:background="@color/accent"
-        android:clickable="false"
-        android:focusable="false" />
-
-    <!-- ═══════════════════════════════════════════════
-         TOP BAR
-         ═══════════════════════════════════════════════ -->
-    <LinearLayout
-        android:id="@+id/top_bar"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@color/panel"
-        android:orientation="vertical"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:paddingStart="20dp"
-            android:paddingEnd="16dp"
-            android:paddingTop="14dp"
-            android:paddingBottom="14dp">
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:fontFamily="sans-serif-black"
-                android:letterSpacing="0.20"
-                android:shadowColor="@color/accent"
-                android:shadowDx="0"
-                android:shadowDy="0"
-                android:shadowRadius="12"
-                android:text="HANDY"
-                android:textColor="@color/text_primary"
-                android:textSize="18sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/counter_badge"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="14dp"
-                android:background="@drawable/bg_chip"
-                android:paddingHorizontal="10dp"
-                android:paddingVertical="4dp"
-                android:text="0 SIGNS"
-                android:textColor="@color/accent"
-                android:textSize="10sp"
-                android:letterSpacing="0.12"
-                android:textStyle="bold" />
-
-            <ImageButton
-                android:id="@+id/camera_switch_button"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="Switch camera"
-                android:src="@drawable/baseline_cameraswitch_24"
-                android:tint="@color/text_primary" />
-        </LinearLayout>
-
-        <!-- Bottom border line -->
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="@color/divider" />
-    </LinearLayout>
-
-    <!-- ═══════════════════════════════════════════════
-         CENTER ZONE — gesture label + confidence
-         Fills all space between top_bar and history_scroll
-         ═══════════════════════════════════════════════ -->
-    <LinearLayout
-        android:id="@+id/gesture_container"
+    <!-- ═══════════════════════════════════════════════════════════
+         CAMERA HERO  — top 65 % of screen
+         ═══════════════════════════════════════════════════════════ -->
+    <FrameLayout
+        android:id="@+id/camera_container"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:gravity="center"
-        android:orientation="vertical"
-        android:paddingHorizontal="16dp"
-        app:layout_constraintBottom_toTopOf="@id/history_scroll"
-        app:layout_constraintEnd_toEndOf="parent"
+        android:background="#000000"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/camera_guideline"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/top_bar">
+        app:layout_constraintEnd_toEndOf="parent">
 
-        <!-- Live detected gesture — auto-sizes so it never overflows -->
-        <TextView
-            android:id="@+id/gesture_text_view"
+        <androidx.camera.view.PreviewView
+            android:id="@+id/view_finder"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:autoSizeMaxTextSize="72sp"
-            android:autoSizeMinTextSize="18sp"
-            android:autoSizeStepGranularity="2sp"
-            android:autoSizeTextType="uniform"
-            android:ellipsize="end"
-            android:fontFamily="sans-serif-black"
-            android:gravity="center"
-            android:maxLines="1"
-            android:shadowColor="@color/accent"
-            android:shadowDx="0"
-            android:shadowDy="0"
-            android:shadowRadius="24"
-            android:text="…"
-            android:textColor="@color/text_primary"
-            android:textSize="72sp"
-            android:textStyle="bold" />
+            android:layout_height="match_parent" />
 
-        <!-- Confidence bar — thin clean line -->
-        <ProgressBar
-            android:id="@+id/confidence_bar"
-            style="?android:attr/progressBarStyleHorizontal"
-            android:layout_width="160dp"
-            android:layout_height="3dp"
-            android:layout_marginTop="16dp"
-            android:max="100"
-            android:progress="0"
-            android:progressDrawable="@drawable/bg_confidence_bar" />
+        <com.signapp.OverlayView
+            android:id="@+id/overlay"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
 
-    </LinearLayout>
+        <!-- Subtle commit flash -->
+        <View
+            android:id="@+id/flash_overlay"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:alpha="0"
+            android:background="@color/accent"
+            android:clickable="false"
+            android:focusable="false" />
 
-    <!-- ═══════════════════════════════════════════════
-         HISTORY CHIPS — anchored just above bottom panel
-         ═══════════════════════════════════════════════ -->
-    <HorizontalScrollView
-        android:id="@+id/history_scroll"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:paddingHorizontal="16dp"
-        android:paddingVertical="8dp"
-        android:scrollbars="none"
-        app:layout_constraintBottom_toTopOf="@id/bottom_panel"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent">
+        <!-- Camera switch — top left -->
+        <ImageButton
+            android:id="@+id/camera_switch_button"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_gravity="top|start"
+            android:layout_margin="14dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Switch camera"
+            android:src="@drawable/baseline_cameraswitch_24"
+            android:tint="#AAFFFFFF" />
 
-        <LinearLayout
-            android:id="@+id/history_chips_container"
+        <!-- LIVE indicator — top right -->
+        <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal" />
-    </HorizontalScrollView>
+            android:layout_gravity="top|end"
+            android:layout_margin="16dp"
+            android:letterSpacing="0.12"
+            android:text="● LIVE"
+            android:textColor="#CCFFFFFF"
+            android:textSize="10sp"
+            android:textStyle="bold" />
 
-    <!-- ═══════════════════════════════════════════════
-         BOTTOM PANEL
-         ═══════════════════════════════════════════════ -->
-    <LinearLayout
-        android:id="@+id/bottom_panel"
-        android:layout_width="match_parent"
+    </FrameLayout>
+
+    <!-- Guideline at 65 % — bottom edge of camera -->
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/camera_guideline"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:background="@color/panel"
-        android:orientation="vertical"
-        android:paddingBottom="28dp"
+        android:orientation="horizontal"
+        app:layout_constraintGuide_percent="0.65" />
+
+    <!-- ═══════════════════════════════════════════════════════════
+         SCROLLABLE INFO PANEL — bottom 35 %
+         ═══════════════════════════════════════════════════════════ -->
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/content_scroll"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:fillViewport="true"
+        android:background="@color/bg"
+        app:layout_constraintTop_toBottomOf="@id/camera_guideline"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent">
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
 
-        <!-- Top border line -->
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="@color/divider" />
-
-        <!-- Sentence output -->
-        <TextView
-            android:id="@+id/subtitle_text"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:ellipsize="start"
-            android:fontFamily="sans-serif-medium"
-            android:gravity="center_vertical"
-            android:hint="MAKE A SIGN TO BEGIN"
-            android:maxLines="2"
-            android:minHeight="52dp"
-            android:paddingHorizontal="20dp"
-            android:paddingTop="12dp"
-            android:paddingBottom="4dp"
-            android:textColor="@color/text_primary"
-            android:textColorHint="@color/text_hint"
-            android:textSize="22sp"
-            android:textStyle="bold"
-            android:letterSpacing="0.04" />
-
-        <!-- Action buttons row -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="center"
-            android:orientation="horizontal"
-            android:paddingHorizontal="12dp"
-            android:paddingTop="10dp">
+            android:orientation="vertical">
 
-            <!-- Clear all -->
-            <ImageButton
-                android:id="@+id/delete_button"
-                android:layout_width="52dp"
-                android:layout_height="44dp"
-                android:layout_marginHorizontal="4dp"
-                android:background="@drawable/bg_neon_button"
-                android:contentDescription="Clear all"
-                android:src="@drawable/baseline_delete_forever_24"
-                android:tint="@color/danger" />
+            <!-- ── HEADER ── -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingStart="20dp"
+                android:paddingEnd="20dp"
+                android:paddingTop="14dp"
+                android:paddingBottom="14dp">
 
-            <!-- Delete last word -->
-            <ImageButton
-                android:id="@+id/back_button"
-                android:layout_width="52dp"
-                android:layout_height="44dp"
-                android:layout_marginHorizontal="4dp"
-                android:background="@drawable/bg_neon_button"
-                android:contentDescription="Delete last word"
-                android:src="@drawable/baseline_arrow_back_24"
-                android:tint="@color/text_primary" />
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
 
-            <!-- Space -->
-            <Button
-                android:id="@+id/space_button"
-                android:layout_width="52dp"
-                android:layout_height="44dp"
-                android:layout_marginHorizontal="4dp"
-                android:background="@drawable/bg_neon_button"
-                android:contentDescription="Add space"
-                android:text="SP"
-                android:textColor="@color/text_secondary"
-                android:textSize="11sp"
-                android:letterSpacing="0.10"
-                android:textStyle="bold" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="sans-serif-black"
+                        android:letterSpacing="0.14"
+                        android:text="HANDY"
+                        android:textColor="@color/text_primary"
+                        android:textSize="17sp"
+                        android:textStyle="bold" />
 
-            <!-- Copy -->
-            <ImageButton
-                android:id="@+id/copy_button"
-                android:layout_width="52dp"
-                android:layout_height="44dp"
-                android:layout_marginHorizontal="4dp"
-                android:background="@drawable/bg_neon_button"
-                android:contentDescription="Copy text"
-                android:src="@drawable/ic_copy"
-                android:tint="@color/text_primary" />
+                    <TextView
+                        android:id="@+id/gesture_count_text"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="0 gestures this session"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="11sp" />
 
-            <!-- Share -->
-            <ImageButton
-                android:id="@+id/share_button"
-                android:layout_width="52dp"
-                android:layout_height="44dp"
-                android:layout_marginHorizontal="4dp"
-                android:background="@drawable/bg_neon_button"
-                android:contentDescription="Share sentence"
-                android:src="@drawable/ic_share"
-                android:tint="@color/text_primary" />
+                </LinearLayout>
 
-            <!-- Speak all — accent circle -->
-            <ImageButton
-                android:id="@+id/fab_speak"
-                android:layout_width="52dp"
-                android:layout_height="44dp"
-                android:layout_marginHorizontal="4dp"
-                android:background="@color/accent"
-                android:contentDescription="Speak sentence"
-                android:src="@drawable/ic_volume_up"
-                android:tint="@color/deep_black" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Sign Language Recognition"
+                    android:textColor="@color/text_hint"
+                    android:textSize="10sp"
+                    android:letterSpacing="0.05" />
+
+            </LinearLayout>
+
+            <View android:layout_width="match_parent" android:layout_height="1dp"
+                android:background="@color/border" />
+
+            <!-- ── CURRENT PREDICTION ── -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingStart="20dp"
+                android:paddingEnd="20dp"
+                android:paddingTop="18dp"
+                android:paddingBottom="18dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:letterSpacing="0.18"
+                    android:text="CURRENT PREDICTION"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="10sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/gesture_text_view"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:autoSizeMaxTextSize="38sp"
+                    android:autoSizeMinTextSize="16sp"
+                    android:autoSizeStepGranularity="2sp"
+                    android:autoSizeTextType="uniform"
+                    android:ellipsize="end"
+                    android:fontFamily="sans-serif-black"
+                    android:maxLines="1"
+                    android:text="—"
+                    android:textColor="@color/text_primary"
+                    android:textSize="38sp"
+                    android:textStyle="bold" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <ProgressBar
+                        android:id="@+id/confidence_bar"
+                        style="?android:attr/progressBarStyleHorizontal"
+                        android:layout_width="72dp"
+                        android:layout_height="3dp"
+                        android:max="100"
+                        android:progress="0"
+                        android:progressDrawable="@drawable/bg_confidence_bar" />
+
+                    <TextView
+                        android:id="@+id/confidence_text_view"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="10dp"
+                        android:textColor="@color/accent"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:letterSpacing="0.06" />
+
+                </LinearLayout>
+            </LinearLayout>
+
+            <View android:layout_width="match_parent" android:layout_height="1dp"
+                android:background="@color/border" />
+
+            <!-- ── CANDIDATES ── -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingStart="20dp"
+                android:paddingEnd="20dp"
+                android:paddingTop="16dp"
+                android:paddingBottom="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:letterSpacing="0.18"
+                    android:text="CANDIDATES"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="10sp"
+                    android:textStyle="bold" />
+
+                <LinearLayout
+                    android:id="@+id/candidates_container"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:orientation="vertical" />
+
+            </LinearLayout>
+
+            <View android:layout_width="match_parent" android:layout_height="1dp"
+                android:background="@color/border" />
+
+            <!-- ── SESSION ── -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingStart="20dp"
+                android:paddingEnd="20dp"
+                android:paddingTop="14dp"
+                android:paddingBottom="14dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:letterSpacing="0.18"
+                    android:text="SESSION"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="10sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/subtitle_text"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:ellipsize="start"
+                    android:maxLines="2"
+                    android:text="—"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="13sp" />
+
+            </LinearLayout>
+
+            <View android:layout_width="match_parent" android:layout_height="1dp"
+                android:background="@color/border" />
+
+            <!-- ── TOOLBAR ── -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="20dp"
+                android:paddingEnd="20dp"
+                android:paddingTop="14dp"
+                android:paddingBottom="20dp">
+
+                <!-- RESET -->
+                <TextView
+                    android:id="@+id/reset_button"
+                    android:layout_width="0dp"
+                    android:layout_height="44dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_button_secondary"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center"
+                    android:letterSpacing="0.12"
+                    android:text="RESET"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+
+                <View
+                    android:layout_width="10dp"
+                    android:layout_height="1dp" />
+
+                <!-- SPEAK -->
+                <TextView
+                    android:id="@+id/speak_button"
+                    android:layout_width="0dp"
+                    android:layout_height="44dp"
+                    android:layout_weight="2"
+                    android:background="@drawable/bg_button_primary"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center"
+                    android:letterSpacing="0.12"
+                    android:text="SPEAK"
+                    android:textColor="#000000"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+
+                <View
+                    android:layout_width="8dp"
+                    android:layout_height="1dp" />
+
+                <!-- MORE ··· -->
+                <ImageButton
+                    android:id="@+id/more_button"
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    android:background="@drawable/bg_button_secondary"
+                    android:contentDescription="More options"
+                    android:src="@drawable/ic_more_horiz"
+                    android:tint="@color/text_secondary" />
+
+            </LinearLayout>
 
         </LinearLayout>
-    </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

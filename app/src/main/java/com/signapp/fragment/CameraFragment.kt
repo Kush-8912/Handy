@@ -16,6 +16,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
+import android.widget.PopupMenu
 import android.widget.TextView
 import android.widget.Toast
 import androidx.camera.core.*
@@ -23,9 +24,10 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
-import com.signapp.SignRecognizerHelper
+import com.google.mediapipe.tasks.vision.gesturerecognizer.GestureRecognizerResult
 import com.signapp.MainViewModel
 import com.signapp.R
+import com.signapp.SignRecognizerHelper
 import com.signapp.databinding.FragmentCameraBinding
 import java.util.Locale
 import java.util.concurrent.ExecutorService
@@ -50,9 +52,9 @@ class CameraFragment : Fragment(), SignRecognizerHelper.GestureRecognizerListene
     private lateinit var tts: TextToSpeech
     private var ttsReady = false
 
-    private val sentence = StringBuilder()
-    private val gestureHistory = ArrayDeque<String>()
-    private var totalGestureCount = 0
+    private val session = StringBuilder()
+    private val sessionWords = ArrayDeque<String>()
+    private var totalCount = 0
 
     private var lastGesture = "none"
     private var gestureCount = 0
@@ -62,9 +64,7 @@ class CameraFragment : Fragment(), SignRecognizerHelper.GestureRecognizerListene
     override fun onResume() {
         super.onResume()
         backgroundExecutor.execute {
-            if (gestureRecognizerHelper.isClosed()) {
-                gestureRecognizerHelper.setupGestureRecognizer()
-            }
+            if (gestureRecognizerHelper.isClosed()) gestureRecognizerHelper.setupGestureRecognizer()
         }
     }
 
@@ -126,76 +126,89 @@ class CameraFragment : Fragment(), SignRecognizerHelper.GestureRecognizerListene
             bindCameraUseCases()
         }
 
-        binding.deleteButton.setOnClickListener {
-            sentence.clear()
-            gestureHistory.clear()
-            binding.subtitleText.text = ""
-            binding.historyChipsContainer.removeAllViews()
-            totalGestureCount = 0
-            binding.counterBadge.text = "0 SIGNS"
+        binding.resetButton.setOnClickListener {
+            session.clear()
+            sessionWords.clear()
+            totalCount = 0
+            committedGesture = ""
+            binding.subtitleText.text = "—"
+            binding.gestureCountText.text = "0 gestures this session"
+            binding.candidatesContainer.removeAllViews()
+            binding.gestureTextView.text = "—"
+            binding.confidenceTextView.text = ""
+            binding.confidenceBar.progress = 0
             resetStability()
         }
 
-        binding.backButton.setOnClickListener {
-            if (sentence.isNotEmpty()) {
-                // Remove last word
-                val trimmed = sentence.trimEnd()
-                val lastSpace = trimmed.lastIndexOf(' ')
-                sentence.clear()
-                if (lastSpace >= 0) sentence.append(trimmed.substring(0, lastSpace + 1))
-                binding.subtitleText.text = sentence.toString()
-                resetStability()
-                committedGesture = ""
-            }
-        }
-
-        binding.spaceButton.setOnClickListener {
-            if (sentence.isNotEmpty() && sentence.last() != ' ') {
-                sentence.append(' ')
-                binding.subtitleText.text = sentence.toString()
-                resetStability()
-            }
-        }
-
-        binding.copyButton.setOnClickListener {
-            val text = binding.subtitleText.text.toString().trim()
-            if (text.isEmpty()) {
-                Toast.makeText(requireContext(), "Nothing to copy yet", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-            val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-            clipboard.setPrimaryClip(ClipData.newPlainText("Handy", text))
-            Toast.makeText(requireContext(), "Copied!", Toast.LENGTH_SHORT).show()
-        }
-
-        binding.shareButton.setOnClickListener {
-            val text = binding.subtitleText.text.toString().trim()
-            if (text.isEmpty()) {
-                Toast.makeText(requireContext(), "Nothing to share yet", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-            startActivity(
-                Intent.createChooser(
-                    Intent(Intent.ACTION_SEND).apply {
-                        type = "text/plain"
-                        putExtra(Intent.EXTRA_TEXT, text)
-                    },
-                    "Share via"
-                )
-            )
-        }
-
-        binding.fabSpeak.setOnClickListener {
-            val text = binding.subtitleText.text.toString().trim()
+        binding.speakButton.setOnClickListener {
+            val text = session.toString().trim()
             if (text.isEmpty()) {
                 Toast.makeText(requireContext(), "Nothing to speak yet", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
             if (ttsReady) tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, null)
-            binding.fabSpeak.animate().scaleX(0.88f).scaleY(0.88f).setDuration(80)
-                .withEndAction { binding.fabSpeak.animate().scaleX(1f).scaleY(1f).setDuration(120).start() }
-                .start()
+            binding.speakButton.animate()
+                .scaleX(0.93f).scaleY(0.93f).setDuration(70)
+                .withEndAction {
+                    binding.speakButton.animate().scaleX(1f).scaleY(1f).setDuration(120).start()
+                }.start()
         }
+
+        binding.moreButton.setOnClickListener { anchor ->
+            val popup = PopupMenu(requireContext(), anchor)
+            popup.menuInflater.inflate(R.menu.menu_more, popup.menu)
+            popup.setOnMenuItemClickListener { item ->
+                when (item.itemId) {
+                    R.id.action_back_word -> {
+                        if (sessionWords.isNotEmpty()) {
+                            sessionWords.removeLast()
+                            rebuildSession()
+                            committedGesture = ""
+                            resetStability()
+                        }
+                        true
+                    }
+                    R.id.action_space -> {
+                        if (session.isNotEmpty() && session.last() != ' ') session.append(' ')
+                        true
+                    }
+                    R.id.action_copy -> {
+                        val text = session.toString().trim()
+                        if (text.isEmpty()) {
+                            Toast.makeText(requireContext(), "Nothing to copy", Toast.LENGTH_SHORT).show()
+                        } else {
+                            val cb = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                            cb.setPrimaryClip(ClipData.newPlainText("Handy", text))
+                            Toast.makeText(requireContext(), "Copied", Toast.LENGTH_SHORT).show()
+                        }
+                        true
+                    }
+                    R.id.action_share -> {
+                        val text = session.toString().trim()
+                        if (text.isNotEmpty()) {
+                            startActivity(Intent.createChooser(
+                                Intent(Intent.ACTION_SEND).apply {
+                                    type = "text/plain"
+                                    putExtra(Intent.EXTRA_TEXT, text)
+                                }, "Share via"
+                            ))
+                        }
+                        true
+                    }
+                    else -> false
+                }
+            }
+            popup.show()
+        }
+    }
+
+    private fun rebuildSession() {
+        session.clear()
+        sessionWords.forEachIndexed { i, word ->
+            if (i > 0) session.append(' ')
+            session.append(word)
+        }
+        binding.subtitleText.text = session.toString().trim().ifEmpty { "—" }
     }
 
     private fun setUpCamera() {
@@ -209,33 +222,28 @@ class CameraFragment : Fragment(), SignRecognizerHelper.GestureRecognizerListene
 
     @SuppressLint("UnsafeOptInUsageError")
     private fun bindCameraUseCases() {
-        val cameraProvider = cameraProvider
-            ?: throw IllegalStateException("Camera initialization failed.")
-        val cameraSelector = CameraSelector.Builder().requireLensFacing(cameraFacing).build()
-        preview = Preview.Builder()
-            .setTargetRotation(binding.viewFinder.display.rotation)
-            .build()
+        val cp = cameraProvider ?: throw IllegalStateException("Camera init failed.")
+        val selector = CameraSelector.Builder().requireLensFacing(cameraFacing).build()
+        preview = Preview.Builder().setTargetRotation(binding.viewFinder.display.rotation).build()
         imageAnalyzer = ImageAnalysis.Builder()
             .setTargetResolution(Size(480, 640))
             .setTargetRotation(binding.viewFinder.display.rotation)
             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
             .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
-            .build()
-            .also {
+            .build().also {
                 it.setAnalyzer(backgroundExecutor) { image ->
                     if (::gestureRecognizerHelper.isInitialized) {
                         gestureRecognizerHelper.recognizeLiveStream(
-                            image,
-                            cameraFacing == CameraSelector.LENS_FACING_FRONT
+                            image, cameraFacing == CameraSelector.LENS_FACING_FRONT
                         )
                     } else {
                         image.close()
                     }
                 }
             }
-        cameraProvider.unbindAll()
+        cp.unbindAll()
         try {
-            camera = cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageAnalyzer)
+            camera = cp.bindToLifecycle(this, selector, preview, imageAnalyzer)
             preview?.setSurfaceProvider(binding.viewFinder.surfaceProvider)
         } catch (e: Exception) {
             Log.e(TAG, "Camera binding failed", e)
@@ -252,36 +260,32 @@ class CameraFragment : Fragment(), SignRecognizerHelper.GestureRecognizerListene
             val gesture = resultBundle.results
             val confidence = resultBundle.confidence
 
-            binding.confidenceBar.progress = if (gesture != "none" && gesture != "None")
-                (confidence * 100).toInt() else 0
-
             if (gesture != "none" && gesture != "None") {
                 val label = formatGestureName(gesture)
-                val pct = String.format("%.0f%%", confidence * 100)
-                binding.gestureTextView.text = "$label  $pct"
-
-                if (gesture == lastGesture) {
-                    gestureCount++
-                    if (gestureCount == stabilityThreshold) {
-                        commitGesture(label)
-                    }
-                } else {
-                    lastGesture = gesture
-                    gestureCount = 1
-                }
-            } else {
-                binding.gestureTextView.text = "…"
-                committedGesture = ""
-                resetStability()
-                binding.overlay.clear()
-            }
-
-            if (gesture != "none" && gesture != "None") {
+                binding.gestureTextView.text = label
+                binding.confidenceTextView.text = "${(confidence * 100).toInt()}% CONFIDENCE"
+                binding.confidenceBar.progress = (confidence * 100).toInt()
+                updateCandidates(resultBundle.gestureRecognizerResult)
                 binding.overlay.setResults(
                     resultBundle.gestureRecognizerResult,
                     resultBundle.inputImageHeight,
                     resultBundle.inputImageWidth
                 )
+                if (gesture == lastGesture) {
+                    gestureCount++
+                    if (gestureCount == stabilityThreshold) commitGesture(label)
+                } else {
+                    lastGesture = gesture
+                    gestureCount = 1
+                }
+            } else {
+                binding.gestureTextView.text = "—"
+                binding.confidenceTextView.text = ""
+                binding.confidenceBar.progress = 0
+                binding.candidatesContainer.removeAllViews()
+                committedGesture = ""
+                resetStability()
+                binding.overlay.clear()
             }
         }
     }
@@ -289,55 +293,70 @@ class CameraFragment : Fragment(), SignRecognizerHelper.GestureRecognizerListene
     private fun commitGesture(label: String) {
         if (committedGesture == label) return
         committedGesture = label
-        if (!sentence.trimEnd().endsWith(label)) {
-            if (sentence.isNotEmpty() && sentence.last() != ' ') sentence.append(' ')
-            sentence.append(label)
-            binding.subtitleText.text = sentence.toString()
-        }
+
+        sessionWords.addLast(label)
+        if (sessionWords.size > 30) sessionWords.removeFirst()
+        totalCount++
+
+        rebuildSession()
+        binding.gestureCountText.text = "$totalCount gesture${if (totalCount == 1) "" else "s"} this session"
+
         if (ttsReady) tts.speak(label, TextToSpeech.QUEUE_FLUSH, null, null)
-        addToHistory(label)
         playCommitFlash()
         binding.root.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-        totalGestureCount++
-        binding.counterBadge.text = "$totalGestureCount SIGNS"
     }
 
-    private fun addToHistory(label: String) {
-        gestureHistory.addLast(label)
-        if (gestureHistory.size > 10) gestureHistory.removeFirst()
+    private fun updateCandidates(result: GestureRecognizerResult) {
+        binding.candidatesContainer.removeAllViews()
+        if (result.gestures().isEmpty()) return
 
-        binding.historyChipsContainer.removeAllViews()
-        for (word in gestureHistory) {
-            val chip = TextView(requireContext()).apply {
-                text = word
-                setTextColor(0xFFFFFFFF.toInt())
-                textSize = 13f
-                typeface = Typeface.DEFAULT_BOLD
-                setPadding(28, 10, 28, 10)
-                background = ContextCompat.getDrawable(requireContext(), R.drawable.bg_chip)
-                val lp = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
+        val candidates = result.gestures()[0]
+            .filter { !it.categoryName().isNullOrEmpty() && it.categoryName() != "none" }
+            .take(4)
+        if (candidates.isEmpty()) return
+
+        candidates.forEachIndexed { i, category ->
+            val name = formatGestureName(category.categoryName()!!)
+            val pct = (category.score() * 100).toInt()
+            val isTop = i == 0
+
+            val row = LinearLayout(requireContext()).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = android.view.Gravity.CENTER_VERTICAL
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
-                )
-                lp.setMargins(6, 0, 6, 0)
-                layoutParams = lp
-                setOnClickListener {
-                    if (ttsReady) tts.speak(word, TextToSpeech.QUEUE_FLUSH, null, null)
-                }
+                ).also { lp -> lp.topMargin = if (i == 0) 0 else 10.dp }
             }
-            binding.historyChipsContainer.addView(chip)
-        }
-        binding.historyScroll.post {
-            binding.historyScroll.fullScroll(View.FOCUS_RIGHT)
+
+            row.addView(TextView(requireContext()).apply {
+                text = name
+                setTextColor(if (isTop) 0xFFFFFFFF.toInt() else 0xFFA0A0A0.toInt())
+                textSize = if (isTop) 14f else 13f
+                if (isTop) typeface = Typeface.DEFAULT_BOLD
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            })
+
+            row.addView(TextView(requireContext()).apply {
+                text = "$pct%"
+                setTextColor(if (isTop) 0xFF4DA3FF.toInt() else 0xFF555555.toInt())
+                textSize = if (isTop) 14f else 13f
+                if (isTop) typeface = Typeface.DEFAULT_BOLD
+                gravity = android.view.Gravity.END
+            })
+
+            binding.candidatesContainer.addView(row)
         }
     }
 
     private fun playCommitFlash() {
-        binding.flashOverlay.alpha = 0.25f
-        binding.flashOverlay.animate()
-            .alpha(0f)
-            .setDuration(350)
-            .start()
+        binding.flashOverlay.alpha = 0.06f
+        binding.flashOverlay.animate().alpha(0f).setDuration(500).start()
+        binding.gestureTextView.animate()
+            .scaleX(1.03f).scaleY(1.03f).setDuration(70)
+            .withEndAction {
+                binding.gestureTextView.animate().scaleX(1f).scaleY(1f).setDuration(140).start()
+            }.start()
     }
 
     private fun resetStability() {
@@ -348,6 +367,8 @@ class CameraFragment : Fragment(), SignRecognizerHelper.GestureRecognizerListene
     private fun formatGestureName(raw: String): String =
         raw.replace('_', ' ')
             .replace(Regex("([a-z])([A-Z])")) { "${it.groupValues[1]} ${it.groupValues[2]}" }
+
+    private val Int.dp: Int get() = (this * resources.displayMetrics.density).toInt()
 
     override fun onError(error: String, errorCode: Int) {
         activity?.runOnUiThread {
