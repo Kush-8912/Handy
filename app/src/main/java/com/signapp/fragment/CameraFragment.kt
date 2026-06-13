@@ -247,7 +247,7 @@ class CameraFragment : Fragment(), SignRecognizerHelper.GestureRecognizerListene
 
                 val candidates: List<GestureCandidate> = if (result.gestures().isNotEmpty()) {
                     result.gestures()[0]
-                        .filter { !it.categoryName().isNullOrEmpty() && it.categoryName() != "none" }
+                        .filter { !it.categoryName().isNullOrEmpty() && !it.categoryName().equals("none", ignoreCase = true) }
                         .take(4)
                         .map { GestureCandidate(formatGestureName(it.categoryName()!!), it.score()) }
                 } else emptyList()
