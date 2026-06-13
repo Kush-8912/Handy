@@ -33,7 +33,6 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.outlined.CameraAlt
 import androidx.compose.material.icons.outlined.FrontHand
-import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
@@ -147,65 +146,53 @@ fun HandyScreen(
 
 @Composable
 private fun HeaderSection(gestureCount: Int) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(
-            modifier = Modifier.weight(1f).padding(end = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        // HANDY + compact pill on the same line
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                 text = "HANDY",
                 fontSize = 52.sp,
                 fontWeight = FontWeight.ExtraBold,
                 color = HandyColors.TextPrimary,
-                letterSpacing = (-1).sp
+                letterSpacing = (-1).sp,
+                maxLines = 1
             )
-            Text(
-                text = "Sign Language Recognition",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Medium,
-                color = HandyColors.TextSecondary
-            )
-        }
 
-        Box(
-            modifier = Modifier
-                .width(160.dp)
-                .height(72.dp)
-                .clip(RoundedCornerShape(20.dp))
-                .background(HandyColors.SurfaceSecondary)
-                .border(1.dp, HandyColors.Border, RoundedCornerShape(20.dp))
-                .padding(horizontal = 14.dp, vertical = 12.dp)
-        ) {
+            // Compact pill badge — wraps its own content, never clips subtitle
             Row(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .clip(RoundedCornerShape(100.dp))
+                    .background(HandyColors.SurfaceSecondary)
+                    .border(1.dp, HandyColors.Border, RoundedCornerShape(100.dp))
+                    .padding(horizontal = 12.dp, vertical = 7.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Outlined.GridView,
-                    contentDescription = null,
-                    tint = HandyColors.TextSecondary,
-                    modifier = Modifier.size(18.dp)
+                Box(
+                    modifier = Modifier
+                        .size(7.dp)
+                        .background(Color(0xFF22C55E), CircleShape)
                 )
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(
-                        text = "29 gestures",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = HandyColors.TextPrimary
-                    )
-                    Text(
-                        text = "loaded",
-                        fontSize = 11.sp,
-                        color = HandyColors.TextSecondary
-                    )
-                }
+                Text(
+                    text = "29 gestures",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = HandyColors.TextSecondary
+                )
             }
         }
+
+        // Subtitle sits below, full width, never truncated
+        Text(
+            text = "Sign Language Recognition",
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Medium,
+            color = HandyColors.TextSecondary
+        )
     }
 }
 
@@ -349,10 +336,11 @@ private fun PredictionCard(
                 Spacer(Modifier.height(8.dp))
                 Text(
                     text = gesture,
-                    fontSize = 44.sp,
+                    fontSize = 32.sp,
                     fontWeight = FontWeight.ExtraBold,
                     color = HandyColors.TextPrimary,
-                    maxLines = 1,
+                    maxLines = 2,
+                    lineHeight = 36.sp,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.scale(gestureScale)
                 )
@@ -577,6 +565,7 @@ private fun ActionsRow(
             onClick = onReset,
             modifier = Modifier.weight(1.4f).height(60.dp),
             shape = RoundedCornerShape(20.dp),
+            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
             colors = ButtonDefaults.outlinedButtonColors(
                 containerColor = HandyColors.Surface,
                 contentColor = HandyColors.TextSecondary
@@ -589,7 +578,7 @@ private fun ActionsRow(
                 modifier = Modifier.size(18.dp)
             )
             Spacer(Modifier.width(6.dp))
-            Text(text = "Reset", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+            Text(text = "Reset", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
         }
 
         Button(
