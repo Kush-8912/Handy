@@ -71,6 +71,9 @@ class CameraFragment : Fragment(), SignRecognizerHelper.GestureRecognizerListene
     private val stabilityThreshold = 4
     private var committedGesture = ""
 
+    // Rolling pool of recent unique detections → populates Top Candidates
+    private val recentGestures = LinkedHashMap<String, Float>()
+
     override fun onResume() {
         super.onResume()
         backgroundExecutor.execute {
@@ -156,6 +159,7 @@ class CameraFragment : Fragment(), SignRecognizerHelper.GestureRecognizerListene
     private fun resetSession() {
         viewModel.resetSession()
         committedGesture = ""
+        recentGestures.clear()
         resetStability()
         overlayView.clear()
     }
@@ -245,12 +249,16 @@ class CameraFragment : Fragment(), SignRecognizerHelper.GestureRecognizerListene
             if (gesture != "none" && gesture != "None") {
                 val label = formatGestureName(gesture)
 
-                val candidates: List<GestureCandidate> = if (result.gestures().isNotEmpty()) {
-                    result.gestures()[0]
-                        .filter { !it.categoryName().isNullOrEmpty() && !it.categoryName().equals("none", ignoreCase = true) }
-                        .take(4)
-                        .map { GestureCandidate(formatGestureName(it.categoryName()!!), it.score()) }
-                } else emptyList()
+                // Add to rolling pool (most recent at end, max 4 unique gestures)
+                recentGestures.remove(label)
+                recentGestures[label] = confidence
+                if (recentGestures.size > 4) recentGestures.remove(recentGestures.keys.first())
+
+                // Current gesture first, then remaining recent ones by confidence
+                val candidates = recentGestures.entries
+                    .toList()
+                    .reversed()
+                    .map { GestureCandidate(it.key, it.value) }
 
                 viewModel.updateRecognitionResult(label, confidence, candidates)
 
@@ -267,6 +275,7 @@ class CameraFragment : Fragment(), SignRecognizerHelper.GestureRecognizerListene
                 viewModel.clearRecognition()
                 overlayView.clear()
                 committedGesture = ""
+                recentGestures.clear()
                 resetStability()
             }
         }

@@ -8,7 +8,6 @@ import android.util.Log
 import androidx.camera.core.ImageProxy
 import com.google.mediapipe.framework.image.BitmapImageBuilder
 import com.google.mediapipe.framework.image.MPImage
-import com.google.mediapipe.tasks.components.processors.ClassifierOptions
 import com.google.mediapipe.tasks.core.BaseOptions
 import com.google.mediapipe.tasks.core.Delegate
 import com.google.mediapipe.tasks.vision.core.RunningMode
@@ -46,8 +45,6 @@ class SignRecognizerHelper(
             }
             .build()
 
-        val candidateOptions = ClassifierOptions.builder().setMaxResults(4).build()
-
         val options = GestureRecognizer.GestureRecognizerOptions.builder()
             .setBaseOptions(baseOptions)
             .setMinHandDetectionConfidence(minHandDetectionConfidence)
@@ -55,7 +52,6 @@ class SignRecognizerHelper(
             .setMinHandPresenceConfidence(minHandPresenceConfidence)
             .setRunningMode(runningMode)
             .setNumHands(1)
-            .setCannedGesturesClassifierOptions(candidateOptions)
             .also { builder ->
                 if (runningMode == RunningMode.LIVE_STREAM) {
                     builder.setResultListener(this::handleResult)
