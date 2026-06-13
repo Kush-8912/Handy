@@ -2,10 +2,17 @@ package com.signapp.ui
 
 import androidx.camera.view.PreviewView
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.InfiniteRepeatableSpec
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.keyframes
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -67,6 +74,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.signapp.GestureCandidate
 import com.signapp.HandyUiState
+import com.signapp.LlmPhase
 import com.signapp.OverlayView
 import com.signapp.ui.theme.HandyColors
 import com.signapp.ui.theme.HandyTheme
@@ -84,6 +92,8 @@ fun HandyScreen(
     onAddSpace: () -> Unit,
     onCopy: () -> Unit,
     onShare: () -> Unit,
+    onTranslate: () -> Unit = {},
+    onGenerateReply: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val flashAlpha = remember { Animatable(0f) }
@@ -137,6 +147,15 @@ fun HandyScreen(
                 gestureCount = uiState.gestureCount
             )
 
+            if (uiState.llmPhase != LlmPhase.IDLE) {
+                LlmCard(
+                    translation = uiState.llmTranslation,
+                    reply = uiState.llmReply,
+                    phase = uiState.llmPhase,
+                    onGenerateReply = onGenerateReply
+                )
+            }
+
             ActionsRow(
                 onReset = onReset,
                 onSpeak = onSpeak,
@@ -144,6 +163,15 @@ fun HandyScreen(
                 onAddSpace = onAddSpace,
                 onCopy = onCopy,
                 onShare = onShare
+            )
+
+            TranslateButton(
+                modelReady = uiState.modelReady,
+                modelCopyProgress = uiState.modelCopyProgress,
+                modelError = uiState.modelError,
+                hasSession = uiState.sessionWords.any { it.isNotEmpty() },
+                isRunning = uiState.llmPhase == LlmPhase.TRANSLATING || uiState.llmPhase == LlmPhase.REPLYING,
+                onClick = onTranslate
             )
         }
     }
@@ -660,6 +688,188 @@ private fun ActionsRow(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun LlmCard(
+    translation: String,
+    reply: String,
+    phase: LlmPhase,
+    onGenerateReply: () -> Unit
+) {
+    val isTranslating = phase == LlmPhase.TRANSLATING
+    val isReplying = phase == LlmPhase.REPLYING
+    val showReplyButton = phase == LlmPhase.TRANSLATED
+    val showReply = reply.isNotEmpty()
+
+    // Blinking cursor for streaming
+    val infiniteTransition = rememberInfiniteTransition(label = "cursor")
+    val cursorAlpha by infiniteTransition.animateFloat(
+        initialValue = 1f, targetValue = 0f, label = "cursorAlpha",
+        animationSpec = infiniteRepeatable(
+            animation = keyframes { durationMillis = 900; 1f at 0; 1f at 450; 0f at 451 },
+            repeatMode = RepeatMode.Restart
+        )
+    )
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(28.dp))
+            .background(
+                brush = Brush.linearGradient(
+                    colors = listOf(Color(0xFF0D1829), Color(0xFF0F1115)),
+                    start = Offset(0f, 0f),
+                    end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)
+                )
+            )
+            .border(1.dp, HandyColors.Accent.copy(alpha = 0.18f), RoundedCornerShape(28.dp))
+            .padding(24.dp)
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            // Translation section
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "✨  AI TRANSLATION",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = HandyColors.Accent,
+                    letterSpacing = 1.2.sp
+                )
+                if (isTranslating) {
+                    Text(
+                        text = "generating…",
+                        fontSize = 11.sp,
+                        color = HandyColors.TextSecondary.copy(alpha = 0.55f)
+                    )
+                }
+            }
+
+            val displayTranslation = when {
+                translation.isNotEmpty() -> translation + if (isTranslating) "|".let {
+                    buildString { append("|") }.let { _ -> if (cursorAlpha > 0.5f) "|" else "" }
+                } else ""
+                isTranslating -> if (cursorAlpha > 0.5f) "▌" else " "
+                else -> "—"
+            }
+
+            Text(
+                text = displayTranslation,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = HandyColors.TextPrimary,
+                lineHeight = 26.sp
+            )
+
+            if (showReplyButton) {
+                Button(
+                    onClick = onGenerateReply,
+                    modifier = Modifier.align(Alignment.End).height(40.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = HandyColors.Accent.copy(alpha = 0.15f),
+                        contentColor = HandyColors.Accent
+                    ),
+                    elevation = ButtonDefaults.buttonElevation(0.dp)
+                ) {
+                    Text("Generate Reply  →", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                }
+            }
+
+            // Reply section — appears once reply starts streaming
+            if (showReply || isReplying) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(1.dp)
+                        .background(HandyColors.Border)
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "💬  SUGGESTED REPLY",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = HandyColors.TextSecondary,
+                        letterSpacing = 1.2.sp
+                    )
+                    if (isReplying) {
+                        Text(
+                            text = "generating…",
+                            fontSize = 11.sp,
+                            color = HandyColors.TextSecondary.copy(alpha = 0.55f)
+                        )
+                    }
+                }
+
+                val displayReply = when {
+                    reply.isNotEmpty() -> reply + if (isReplying && cursorAlpha > 0.5f) "|" else ""
+                    isReplying -> if (cursorAlpha > 0.5f) "▌" else " "
+                    else -> ""
+                }
+
+                if (displayReply.isNotEmpty()) {
+                    Text(
+                        text = displayReply,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = HandyColors.TextPrimary,
+                        lineHeight = 24.sp
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TranslateButton(
+    modelReady: Boolean,
+    modelCopyProgress: Float?,
+    modelError: String?,
+    hasSession: Boolean,
+    isRunning: Boolean,
+    onClick: () -> Unit
+) {
+    val enabled = modelReady && hasSession && !isRunning
+    val label = when {
+        modelError != null          -> "Model not found in assets"
+        modelCopyProgress != null   -> "Copying model… ${(modelCopyProgress * 100).toInt()}%"
+        !modelReady                 -> "Loading model…"
+        isRunning                   -> "Generating…"
+        else                        -> "✨  Translate to Natural Language"
+    }
+
+    OutlinedButton(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = Modifier.fillMaxWidth().height(58.dp),
+        shape = RoundedCornerShape(20.dp),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
+        colors = ButtonDefaults.outlinedButtonColors(
+            containerColor = if (enabled) HandyColors.Accent.copy(alpha = 0.08f)
+                             else HandyColors.Surface,
+            contentColor = if (enabled) HandyColors.Accent
+                           else HandyColors.TextSecondary.copy(alpha = 0.45f),
+            disabledContentColor = HandyColors.TextSecondary.copy(alpha = 0.4f),
+            disabledContainerColor = HandyColors.Surface
+        ),
+        border = BorderStroke(
+            1.dp,
+            if (enabled) HandyColors.Accent.copy(alpha = 0.45f) else HandyColors.Border
+        )
+    ) {
+        Text(text = label, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
     }
 }
 
