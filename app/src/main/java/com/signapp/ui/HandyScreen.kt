@@ -32,7 +32,12 @@ import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.outlined.CameraAlt
+import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.FrontHand
+import androidx.compose.material.icons.outlined.ThumbDown
+import androidx.compose.material.icons.outlined.ThumbUp
+import androidx.compose.ui.res.painterResource
+import com.signapp.R
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
@@ -294,6 +299,22 @@ private fun CameraCard(
 }
 
 @Composable
+private fun GestureIcon(gesture: String, active: Boolean, modifier: Modifier = Modifier) {
+    val tint = if (active) HandyColors.Accent else HandyColors.TextSecondary.copy(alpha = 0.35f)
+    when (gesture.trim().lowercase()) {
+        "thumb up"    -> Icon(Icons.Outlined.ThumbUp,       null, tint = tint, modifier = modifier)
+        "thumb down"  -> Icon(Icons.Outlined.ThumbDown,     null, tint = tint, modifier = modifier)
+        "open palm"   -> Icon(Icons.Outlined.FrontHand,     null, tint = tint, modifier = modifier)
+        "i love you"  -> Icon(Icons.Outlined.FavoriteBorder,null, tint = tint, modifier = modifier)
+        "victory"     -> Icon(painterResource(R.drawable.ic_gesture_victory),     null, tint = tint, modifier = modifier)
+        "closed fist" -> Icon(painterResource(R.drawable.ic_gesture_fist),        null, tint = tint, modifier = modifier)
+        "pointing up" -> Icon(painterResource(R.drawable.ic_gesture_pointing_up), null, tint = tint, modifier = modifier)
+        else          -> Icon(Icons.Outlined.FrontHand, null,
+                              tint = HandyColors.TextSecondary.copy(alpha = 0.35f), modifier = modifier)
+    }
+}
+
+@Composable
 private fun PredictionCard(
     gesture: String,
     confidence: Float,
@@ -366,7 +387,7 @@ private fun PredictionCard(
                 }
             }
 
-            // Right: circular gesture icon
+            // Right: circular gesture icon (changes per gesture)
             Box(
                 modifier = Modifier
                     .size(120.dp)
@@ -375,11 +396,9 @@ private fun PredictionCard(
                     .border(1.dp, HandyColors.Border, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Outlined.FrontHand,
-                    contentDescription = "Gesture icon",
-                    tint = if (confidence > 0f) HandyColors.Accent
-                           else HandyColors.TextSecondary.copy(alpha = 0.35f),
+                GestureIcon(
+                    gesture = gesture,
+                    active = confidence > 0f,
                     modifier = Modifier.size(52.dp)
                 )
             }
