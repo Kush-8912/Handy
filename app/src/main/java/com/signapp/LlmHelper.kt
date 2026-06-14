@@ -6,13 +6,9 @@ import com.google.mediapipe.tasks.genai.llminference.LlmInference
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
-import java.util.concurrent.atomic.AtomicReference
-
 class LlmHelper(private val context: Context) {
 
     private var llm: LlmInference? = null
-
-    private val pendingCallback = AtomicReference<((String, Boolean) -> Unit)?>()
 
     fun initialize(onProgress: (Float) -> Unit): Boolean {
         if (llm != null) return true
@@ -28,14 +24,7 @@ class LlmHelper(private val context: Context) {
                 .setModelPath(modelFile.absolutePath)
                 .setMaxTokens(300)
                 .setMaxTopK(40)
-                .setResultListener { partial, done ->
-                    pendingCallback.get()?.invoke(partial, done)
-                    if (done) pendingCallback.set(null)
-                }
-                .setErrorListener { error ->
-                    Log.e(TAG, "LLM error", error)
-                    pendingCallback.getAndSet(null)?.invoke("[Error: ${error?.message}]", true)
-                }
+                .setPreferredBackend(LlmInference.Backend.CPU)
                 .build()
             llm = LlmInference.createFromOptions(context, options)
             true
@@ -72,18 +61,17 @@ class LlmHelper(private val context: Context) {
             onResult("[LLM not ready]", true)
             return
         }
-        pendingCallback.set(onResult)
         try {
-            instance.generateResponseAsync(prompt)
+            instance.generateResponseAsync(prompt) { partial, done ->
+                onResult(partial ?: "", done)
+            }
         } catch (e: Exception) {
             Log.e(TAG, "generateResponseAsync failed", e)
-            pendingCallback.set(null)
             onResult("[Error: ${e.message}]", true)
         }
     }
 
     fun close() {
-        pendingCallback.set(null)
         llm?.close()
         llm = null
     }
