@@ -136,7 +136,7 @@ class LlmHelper(private val context: Context) {
     companion object {
         private const val TAG = "LlmHelper"
 
-        const val MODEL_FILENAME = "gemma-2b-it-cpu-int4.bin"
+        const val MODEL_FILENAME = "gemma-3n-E2B-it-int4.task"
 
         // Paste a direct download link to the MediaPipe-format Gemma model here.
         // Get it from: https://www.kaggle.com/models/google/gemma/tfLite/gemma-2b-it-cpu-int4
