@@ -57,7 +57,7 @@ android {
     }
 
     aaptOptions {
-        noCompress "bin"   // prevent compression of large model files
+        noCompress "bin", "task"   // prevent compression of large model files
     }
 }
 
