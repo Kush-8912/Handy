@@ -69,8 +69,11 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -809,6 +812,55 @@ private fun LlmResultCard(
     }
 }
 
+/** Renders basic markdown: **bold**, bullet lines (- / *), numbered lists, headings (#). */
+@Composable
+private fun MarkdownText(
+    text: String,
+    modifier: Modifier = Modifier,
+    fontSize: androidx.compose.ui.unit.TextUnit = 14.sp,
+    color: Color = HandyColors.TextPrimary
+) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        text.trim().lines().forEach { rawLine ->
+            val line = rawLine.trimEnd()
+            if (line.isBlank()) return@forEach
+
+            val isHeading  = line.matches(Regex("^#{1,3}\\s+.*"))
+            val isBullet   = line.matches(Regex("^[-*]\\s+.*"))
+            val isNumbered = line.matches(Regex("^\\d+\\.\\s+.*"))
+
+            val content = when {
+                isHeading  -> line.replace(Regex("^#{1,3}\\s+"), "")
+                isBullet   -> "•  " + line.replace(Regex("^[-*]\\s+"), "")
+                else       -> line
+            }
+
+            val annotated = buildAnnotatedString {
+                // split on ** pairs for bold
+                val parts = content.split("**")
+                parts.forEachIndexed { i, part ->
+                    if (i % 2 == 1) {
+                        withStyle(SpanStyle(fontWeight = FontWeight.Bold, color = color)) {
+                            append(part)
+                        }
+                    } else {
+                        // strip leftover single * used for italic — show as plain
+                        append(part.replace(Regex("(?<!\\*)\\*(?!\\*)([^*\n]+)(?<!\\*)\\*(?!\\*)"), "$1"))
+                    }
+                }
+            }
+
+            Text(
+                text = annotated,
+                fontSize = if (isHeading) (fontSize.value + 2).sp else fontSize,
+                fontWeight = if (isHeading) FontWeight.SemiBold else FontWeight.Normal,
+                color = color,
+                lineHeight = (fontSize.value * 1.6f).sp
+            )
+        }
+    }
+}
+
 @Composable
 private fun GestureSuggestionCard(
     isSuggesting: Boolean,
@@ -891,13 +943,7 @@ private fun GestureSuggestionCard(
 
             if (suggestion.isNotBlank()) {
                 Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(HandyColors.Border))
-                Text(
-                    text = suggestion,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = HandyColors.TextPrimary,
-                    lineHeight = 22.sp
-                )
+                MarkdownText(text = suggestion, fontSize = 14.sp, color = HandyColors.TextPrimary)
             }
         }
     }
