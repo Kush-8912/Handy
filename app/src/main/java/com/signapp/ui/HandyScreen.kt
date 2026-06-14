@@ -202,7 +202,7 @@ private fun HeaderSection(gestureCount: Int) {
                         .background(Color(0xFF22C55E), CircleShape)
                 )
                 Text(
-                    text = "29 gestures",
+                    text = "$gestureCount gesture${if (gestureCount == 1) "" else "s"}",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
                     color = HandyColors.TextSecondary
