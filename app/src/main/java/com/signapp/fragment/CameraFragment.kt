@@ -179,7 +179,10 @@ class CameraFragment : Fragment(), SignRecognizerHelper.GestureRecognizerListene
     }
 
     private fun shareSession(text: String) {
-        if (text.isBlank()) return
+        if (text.isBlank()) {
+            Toast.makeText(requireContext(), "Nothing to share", Toast.LENGTH_SHORT).show()
+            return
+        }
         startActivity(
             Intent.createChooser(
                 Intent(Intent.ACTION_SEND).apply {
