@@ -80,8 +80,10 @@ class LlmHelper(private val context: Context) {
     // Returns true on success, null if assets don't contain the model (not an error).
     private fun copyFromAssets(target: File, onProgress: (Float) -> Unit): Boolean? {
         return try {
-            val totalBytes = context.assets.openFd(MODEL_FILENAME).use { it.length }
-            context.assets.open(MODEL_FILENAME).use { src ->
+            val afd = context.assets.openFd(MODEL_FILENAME)
+            val totalBytes = afd.length
+            // Use FileInputStream via the raw FD — avoids assets.open() buffering the whole file
+            afd.createInputStream().use { src ->
                 target.outputStream().use { dst ->
                     val buf = ByteArray(65_536)
                     var written = 0L
@@ -93,6 +95,7 @@ class LlmHelper(private val context: Context) {
                     }
                 }
             }
+            afd.close()
             true
         } catch (_: Exception) {
             // Model not in assets — that's fine, we'll try the download URL.
