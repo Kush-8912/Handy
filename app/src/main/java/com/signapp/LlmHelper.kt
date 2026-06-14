@@ -4,23 +4,27 @@ import android.content.Context
 import android.util.Log
 import com.google.mediapipe.tasks.genai.llminference.LlmInference
 import java.io.File
+import java.net.HttpURLConnection
+import java.net.URL
 import java.util.concurrent.atomic.AtomicReference
 
 class LlmHelper(private val context: Context) {
 
     private var llm: LlmInference? = null
 
-    // Swapped before each generateAsync call; the constructor-time listener delegates here.
     private val pendingCallback = AtomicReference<((String, Boolean) -> Unit)?>()
 
     // Blocking — call from a background thread.
-    // onProgress is called with 0..1 while copying the model from assets on first run.
+    // onProgress: 0..1 during download/copy; returns false if model unavailable.
     fun initialize(onProgress: (Float) -> Unit): Boolean {
         if (llm != null) return true
 
         val modelFile = File(context.filesDir, MODEL_FILENAME)
+
         if (!modelFile.exists()) {
+            // Try assets first (dev convenience), then fall back to URL download.
             val ok = copyFromAssets(modelFile, onProgress)
+                ?: downloadFromUrl(modelFile, onProgress)
             if (!ok) return false
         } else {
             onProgress(1f)
@@ -44,14 +48,13 @@ class LlmHelper(private val context: Context) {
             true
         } catch (e: Exception) {
             Log.e(TAG, "LLM init failed", e)
-            modelFile.delete()   // remove so next launch retries a fresh copy
+            modelFile.delete()
             false
         }
     }
 
     fun isReady() = llm != null
 
-    // Non-blocking. MediaPipe calls the listener on its own thread.
     fun generateAsync(prompt: String, onResult: (partial: String, done: Boolean) -> Unit) {
         val instance = llm
         if (instance == null) {
@@ -74,7 +77,8 @@ class LlmHelper(private val context: Context) {
         llm = null
     }
 
-    private fun copyFromAssets(target: File, onProgress: (Float) -> Unit): Boolean {
+    // Returns true on success, null if assets don't contain the model (not an error).
+    private fun copyFromAssets(target: File, onProgress: (Float) -> Unit): Boolean? {
         return try {
             val totalBytes = context.assets.openFd(MODEL_FILENAME).use { it.length }
             context.assets.open(MODEL_FILENAME).use { src ->
@@ -90,8 +94,40 @@ class LlmHelper(private val context: Context) {
                 }
             }
             true
+        } catch (_: Exception) {
+            // Model not in assets — that's fine, we'll try the download URL.
+            target.delete()
+            null
+        }
+    }
+
+    private fun downloadFromUrl(target: File, onProgress: (Float) -> Unit): Boolean {
+        if (DOWNLOAD_URL.isBlank()) {
+            Log.e(TAG, "No model in assets and DOWNLOAD_URL is not set in LlmHelper.")
+            return false
+        }
+        return try {
+            Log.i(TAG, "Downloading model from $DOWNLOAD_URL")
+            val conn = URL(DOWNLOAD_URL).openConnection() as HttpURLConnection
+            conn.connectTimeout = 15_000
+            conn.readTimeout = 0       // large file — no read timeout
+            conn.connect()
+            val totalBytes = conn.contentLengthLong
+            conn.inputStream.use { src ->
+                target.outputStream().use { dst ->
+                    val buf = ByteArray(65_536)
+                    var written = 0L
+                    var n: Int
+                    while (src.read(buf).also { n = it } != -1) {
+                        dst.write(buf, 0, n)
+                        written += n
+                        if (totalBytes > 0) onProgress(written.toFloat() / totalBytes)
+                    }
+                }
+            }
+            true
         } catch (e: Exception) {
-            Log.e(TAG, "Model copy failed — is '$MODEL_FILENAME' in app/src/main/assets/?", e)
+            Log.e(TAG, "Model download failed", e)
             target.delete()
             false
         }
@@ -99,7 +135,13 @@ class LlmHelper(private val context: Context) {
 
     companion object {
         private const val TAG = "LlmHelper"
+
         const val MODEL_FILENAME = "gemma-2b-it-cpu-int4.bin"
+
+        // Paste a direct download link to the MediaPipe-format Gemma model here.
+        // Get it from: https://www.kaggle.com/models/google/gemma/tfLite/gemma-2b-it-cpu-int4
+        // Then host it on Firebase Storage, Google Drive (direct link), or any CDN.
+        const val DOWNLOAD_URL = ""
 
         fun translatePrompt(tokens: List<String>): String =
             "<start_of_turn>user\n" +

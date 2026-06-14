@@ -70,7 +70,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 _uiState.update { it.copy(
                     modelReady = false,
                     modelCopyProgress = null,
-                    modelError = "Model file '${LlmHelper.MODEL_FILENAME}' not found in assets"
+                    modelError = "Gemma model unavailable — set DOWNLOAD_URL in LlmHelper or place '${LlmHelper.MODEL_FILENAME}' in assets/"
                 )}
             }
         }
