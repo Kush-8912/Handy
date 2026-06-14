@@ -33,8 +33,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Cameraswitch
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
@@ -47,7 +51,10 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -87,7 +94,10 @@ fun HandyScreen(
     onCopy: () -> Unit,
     onShare: () -> Unit,
     onTranslate: () -> Unit = {},
-    onGenerateReply: () -> Unit = {},
+    onSelectReply: (String) -> Unit = {},
+    onCopyReply: (String) -> Unit = {},
+    onSpeakReply: (String) -> Unit = {},
+    onSuggestGestures: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val flashAlpha = remember { Animatable(0f) }
@@ -140,11 +150,15 @@ fun HandyScreen(
             )
 
             if (uiState.llmPhase != LlmPhase.IDLE) {
-                LlmCard(
-                    translation = uiState.llmTranslation,
-                    reply = uiState.llmReply,
+                LlmResultCard(
                     phase = uiState.llmPhase,
-                    onGenerateReply = onGenerateReply
+                    translation = uiState.llmTranslation,
+                    intent = uiState.llmIntent,
+                    replyOptions = uiState.llmReplyOptions,
+                    selectedReply = uiState.llmSelectedReply,
+                    onSelectReply = onSelectReply,
+                    onCopyReply = onCopyReply,
+                    onSpeakReply = onSpeakReply
                 )
             }
 
@@ -161,9 +175,17 @@ fun HandyScreen(
                 modelCopyProgress = uiState.modelCopyProgress,
                 modelError = uiState.modelError,
                 hasSession = uiState.sessionWords.any { it.isNotEmpty() },
-                isRunning = uiState.llmPhase == LlmPhase.TRANSLATING || uiState.llmPhase == LlmPhase.REPLYING,
+                isRunning = uiState.llmPhase == LlmPhase.TRANSLATING || uiState.isSuggesting,
                 onClick = onTranslate
             )
+
+            if (uiState.modelReady) {
+                GestureSuggestionCard(
+                    isSuggesting = uiState.isSuggesting,
+                    suggestion = uiState.gestureSuggestion,
+                    onSuggest = onSuggestGestures
+                )
+            }
         }
     }
 }
@@ -570,18 +592,21 @@ private fun ActionsRow(
 }
 
 @Composable
-private fun LlmCard(
-    translation: String,
-    reply: String,
+private fun LlmResultCard(
     phase: LlmPhase,
-    onGenerateReply: () -> Unit
+    translation: String,
+    intent: String,
+    replyOptions: List<String>,
+    selectedReply: String,
+    onSelectReply: (String) -> Unit,
+    onCopyReply: (String) -> Unit,
+    onSpeakReply: (String) -> Unit
 ) {
     val isTranslating = phase == LlmPhase.TRANSLATING
-    val isReplying = phase == LlmPhase.REPLYING
-    val showReplyButton = phase == LlmPhase.TRANSLATED
-    val showReply = reply.isNotEmpty()
+    val hasTranslation = translation.isNotEmpty()
+    val generatingReplies = isTranslating && hasTranslation && replyOptions.isEmpty()
 
-    // Blinking cursor for streaming
+    // Blinking cursor animation for loading state
     val infiniteTransition = rememberInfiniteTransition(label = "cursor")
     val cursorAlpha by infiniteTransition.animateFloat(
         initialValue = 1f, targetValue = 0f, label = "cursorAlpha",
@@ -605,8 +630,9 @@ private fun LlmCard(
             .border(1.dp, HandyColors.Accent.copy(alpha = 0.18f), RoundedCornerShape(28.dp))
             .padding(24.dp)
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            // Translation section
+        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+
+            // ── Translation header ──────────────────────────────────────────
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -619,55 +645,54 @@ private fun LlmCard(
                     color = HandyColors.Accent,
                     letterSpacing = 1.2.sp
                 )
-                if (isTranslating) {
-                    Text(
-                        text = "generating…",
-                        fontSize = 11.sp,
-                        color = HandyColors.TextSecondary.copy(alpha = 0.55f)
-                    )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Intent badge
+                    if (intent.isNotBlank()) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(100.dp))
+                                .background(HandyColors.Accent.copy(alpha = 0.12f))
+                                .border(1.dp, HandyColors.Accent.copy(alpha = 0.3f), RoundedCornerShape(100.dp))
+                                .padding(horizontal = 10.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = intent,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = HandyColors.Accent
+                            )
+                        }
+                    }
+                    if (isTranslating && !hasTranslation) {
+                        Text(
+                            text = "translating…",
+                            fontSize = 11.sp,
+                            color = HandyColors.TextSecondary.copy(alpha = 0.55f)
+                        )
+                    }
                 }
             }
 
-            val displayTranslation = when {
-                translation.isNotEmpty() -> translation + if (isTranslating) "|".let {
-                    buildString { append("|") }.let { _ -> if (cursorAlpha > 0.5f) "|" else "" }
-                } else ""
-                isTranslating -> if (cursorAlpha > 0.5f) "▌" else " "
-                else -> "—"
+            // Translation text
+            val displayText = when {
+                hasTranslation -> translation
+                isTranslating  -> if (cursorAlpha > 0.5f) "▌" else " "
+                else           -> "—"
             }
-
             Text(
-                text = displayTranslation,
+                text = displayText,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = HandyColors.TextPrimary,
                 lineHeight = 26.sp
             )
 
-            if (showReplyButton) {
-                Button(
-                    onClick = onGenerateReply,
-                    modifier = Modifier.align(Alignment.End).height(40.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = HandyColors.Accent.copy(alpha = 0.15f),
-                        contentColor = HandyColors.Accent
-                    ),
-                    elevation = ButtonDefaults.buttonElevation(0.dp)
-                ) {
-                    Text("Generate Reply  →", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                }
-            }
-
-            // Reply section — appears once reply starts streaming
-            if (showReply || isReplying) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(1.dp)
-                        .background(HandyColors.Border)
-                )
+            // ── Reply chips section ─────────────────────────────────────────
+            if (hasTranslation) {
+                Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(HandyColors.Border))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -675,13 +700,13 @@ private fun LlmCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "💬  SUGGESTED REPLY",
+                        text = "💬  SUGGESTED REPLIES",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = HandyColors.TextSecondary,
                         letterSpacing = 1.2.sp
                     )
-                    if (isReplying) {
+                    if (generatingReplies) {
                         Text(
                             text = "generating…",
                             fontSize = 11.sp,
@@ -690,21 +715,189 @@ private fun LlmCard(
                     }
                 }
 
-                val displayReply = when {
-                    reply.isNotEmpty() -> reply + if (isReplying && cursorAlpha > 0.5f) "|" else ""
-                    isReplying -> if (cursorAlpha > 0.5f) "▌" else " "
-                    else -> ""
-                }
+                if (replyOptions.isNotEmpty()) {
+                    val labels = listOf("Formal", "Casual", "Empathetic")
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        replyOptions.forEachIndexed { idx, option ->
+                            val isSelected = option == selectedReply
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(
+                                        if (isSelected) HandyColors.Accent.copy(alpha = 0.14f)
+                                        else HandyColors.SurfaceSecondary
+                                    )
+                                    .border(
+                                        1.dp,
+                                        if (isSelected) HandyColors.Accent.copy(alpha = 0.55f)
+                                        else HandyColors.Border,
+                                        RoundedCornerShape(14.dp)
+                                    )
+                                    .clickable { onSelectReply(option) }
+                                    .padding(horizontal = 14.dp, vertical = 10.dp)
+                            ) {
+                                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                    Text(
+                                        text = labels.getOrElse(idx) { "Option ${idx + 1}" },
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = if (isSelected) HandyColors.Accent
+                                                else HandyColors.TextSecondary.copy(alpha = 0.6f),
+                                        letterSpacing = 0.8.sp
+                                    )
+                                    Text(
+                                        text = option,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = HandyColors.TextPrimary,
+                                        lineHeight = 20.sp
+                                    )
+                                }
+                            }
+                        }
+                    }
 
-                if (displayReply.isNotEmpty()) {
+                    // Actions for selected reply
+                    if (selectedReply.isNotEmpty()) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            OutlinedButton(
+                                onClick = { onCopyReply(selectedReply) },
+                                modifier = Modifier.weight(1f).height(40.dp),
+                                shape = RoundedCornerShape(12.dp),
+                                contentPadding = PaddingValues(horizontal = 8.dp),
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    containerColor = HandyColors.Surface,
+                                    contentColor = HandyColors.TextSecondary
+                                ),
+                                border = BorderStroke(1.dp, HandyColors.Border)
+                            ) {
+                                Icon(Icons.Filled.ContentCopy, null, modifier = Modifier.size(14.dp))
+                                Spacer(Modifier.width(4.dp))
+                                Text("Copy Reply", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                            }
+                            Button(
+                                onClick = { onSpeakReply(selectedReply) },
+                                modifier = Modifier.weight(1f).height(40.dp),
+                                shape = RoundedCornerShape(12.dp),
+                                contentPadding = PaddingValues(horizontal = 8.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = HandyColors.Accent.copy(alpha = 0.15f),
+                                    contentColor = HandyColors.Accent
+                                ),
+                                elevation = ButtonDefaults.buttonElevation(0.dp)
+                            ) {
+                                Icon(Icons.AutoMirrored.Filled.VolumeUp, null, modifier = Modifier.size(14.dp))
+                                Spacer(Modifier.width(4.dp))
+                                Text("Speak Reply", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                            }
+                        }
+                    }
+                } else if (!generatingReplies) {
+                    // Fallback when parsing produced nothing
                     Text(
-                        text = displayReply,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = HandyColors.TextPrimary,
-                        lineHeight = 24.sp
+                        text = "No replies generated",
+                        fontSize = 13.sp,
+                        color = HandyColors.TextSecondary.copy(alpha = 0.5f)
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun GestureSuggestionCard(
+    isSuggesting: Boolean,
+    suggestion: String,
+    onSuggest: (String) -> Unit
+) {
+    var inputText by remember { mutableStateOf("") }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(28.dp))
+            .background(HandyColors.Surface)
+            .border(1.dp, HandyColors.Border, RoundedCornerShape(28.dp))
+            .padding(24.dp)
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text(
+                text = "🤟  SUGGEST GESTURES TO SIGN",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = HandyColors.TextSecondary,
+                letterSpacing = 1.2.sp
+            )
+
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                OutlinedTextField(
+                    value = inputText,
+                    onValueChange = { inputText = it },
+                    placeholder = {
+                        Text(
+                            "Type what you want to say…",
+                            fontSize = 14.sp,
+                            color = HandyColors.TextSecondary.copy(alpha = 0.4f)
+                        )
+                    },
+                    singleLine = true,
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = TextFieldDefaults.colors(
+                        focusedTextColor = HandyColors.TextPrimary,
+                        unfocusedTextColor = HandyColors.TextPrimary,
+                        focusedContainerColor = HandyColors.SurfaceSecondary,
+                        unfocusedContainerColor = HandyColors.SurfaceSecondary,
+                        focusedIndicatorColor = HandyColors.Accent,
+                        unfocusedIndicatorColor = HandyColors.Border
+                    ),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
+                    keyboardActions = KeyboardActions(onGo = {
+                        if (inputText.isNotBlank() && !isSuggesting) {
+                            onSuggest(inputText)
+                        }
+                    })
+                )
+                Button(
+                    onClick = { if (inputText.isNotBlank()) onSuggest(inputText) },
+                    enabled = inputText.isNotBlank() && !isSuggesting,
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier.height(56.dp),
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = HandyColors.Accent,
+                        contentColor = Color.White,
+                        disabledContainerColor = HandyColors.Surface,
+                        disabledContentColor = HandyColors.TextSecondary.copy(alpha = 0.4f)
+                    ),
+                    elevation = ButtonDefaults.buttonElevation(0.dp)
+                ) {
+                    Text(
+                        text = if (isSuggesting) "…" else "Suggest",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+
+            if (suggestion.isNotBlank()) {
+                Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(HandyColors.Border))
+                Text(
+                    text = suggestion,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = HandyColors.TextPrimary,
+                    lineHeight = 22.sp
+                )
             }
         }
     }

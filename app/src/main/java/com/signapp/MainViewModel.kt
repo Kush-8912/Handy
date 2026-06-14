@@ -11,20 +11,28 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-enum class LlmPhase { IDLE, TRANSLATING, TRANSLATED, REPLYING, REPLIED }
+enum class LlmPhase { IDLE, TRANSLATING, TRANSLATED }
 
 data class HandyUiState(
     val currentGesture: String = "—",
     val confidence: Float = 0f,
     val sessionWords: List<String> = emptyList(),
     val gestureCount: Int = 0,
-    // LLM
+    // model loading
     val modelReady: Boolean = false,
-    val modelCopyProgress: Float? = null,   // null = idle, 0..1 = copying in progress
+    val modelCopyProgress: Float? = null,
     val modelError: String? = null,
+    // translation flow
     val llmPhase: LlmPhase = LlmPhase.IDLE,
     val llmTranslation: String = "",
-    val llmReply: String = ""
+    val llmIntent: String = "",
+    val llmReplyOptions: List<String> = emptyList(),
+    val llmSelectedReply: String = "",
+    // gesture suggestion (independent of translation)
+    val isSuggesting: Boolean = false,
+    val gestureSuggestion: String = "",
+    // conversation history for context-aware prompts
+    val conversationHistory: List<String> = emptyList()
 ) {
     val sessionText: String
         get() = sessionWords.filter { it.isNotEmpty() }.joinToString(" ")
@@ -94,56 +102,88 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun deleteLastWord() {
+        val wasTranslated = _uiState.value.llmPhase == LlmPhase.TRANSLATED
         _uiState.update { state ->
             val trimmed = state.sessionWords.dropLastWhile { it.isEmpty() }
             state.copy(sessionWords = if (trimmed.isNotEmpty()) trimmed.dropLast(1) else trimmed)
         }
+        if (wasTranslated) {
+            val remaining = _uiState.value.sessionWords.filter { it.isNotEmpty() }
+            if (remaining.isEmpty()) {
+                _uiState.update { it.copy(
+                    llmPhase = LlmPhase.IDLE,
+                    llmTranslation = "", llmIntent = "",
+                    llmReplyOptions = emptyList(), llmSelectedReply = ""
+                )}
+            } else {
+                translateSession()  // re-translate with the updated session
+            }
+        }
     }
 
     fun resetSession() {
-        // Preserve model state across resets
         _uiState.update { current ->
             HandyUiState(
                 modelReady = current.modelReady,
                 modelCopyProgress = current.modelCopyProgress,
-                modelError = current.modelError
+                modelError = current.modelError,
+                conversationHistory = current.conversationHistory  // preserve across sessions
             )
         }
     }
 
-    // ── LLM ──────────────────────────────────────────────────────────────
+    // ── LLM: translation + intent + reply chips ──────────────────────────
 
     fun translateSession() {
         val tokens = _uiState.value.sessionWords.filter { it.isNotEmpty() }
         if (tokens.isEmpty() || !llmHelper.isReady()) return
+        val state = _uiState.value
+        if (state.llmPhase == LlmPhase.TRANSLATING || state.isSuggesting) return
 
-        _uiState.update { it.copy(
-            llmPhase = LlmPhase.TRANSLATING,
-            llmTranslation = "",
-            llmReply = ""
-        )}
-
-        val prompt = LlmHelper.translatePrompt(tokens)
-        llmHelper.generateAsync(prompt) { partial, done ->
+        viewModelScope.launch(Dispatchers.IO) {
+            val history = _uiState.value.conversationHistory
             _uiState.update { it.copy(
-                llmTranslation = it.llmTranslation + partial,
-                llmPhase = if (done) LlmPhase.TRANSLATED else LlmPhase.TRANSLATING
+                llmPhase = LlmPhase.TRANSLATING,
+                llmTranslation = "",
+                llmIntent = "",
+                llmReplyOptions = emptyList(),
+                llmSelectedReply = ""
             )}
+
+            // Step 1: translate + detect intent (combined)
+            val raw1 = llmHelper.generateSync(LlmHelper.translateAndIntentPrompt(tokens, history))
+            val (sentence, intent) = LlmHelper.parseTranslationAndIntent(raw1)
+            _uiState.update { it.copy(llmTranslation = sentence, llmIntent = intent) }
+
+            // Step 2: generate 3 reply chips
+            val raw2 = llmHelper.generateSync(LlmHelper.replyOptionsPrompt(sentence, intent))
+            val options = LlmHelper.parseReplyOptions(raw2)
+            _uiState.update { it.copy(llmPhase = LlmPhase.TRANSLATED, llmReplyOptions = options) }
         }
     }
 
-    fun generateReply() {
-        val sentence = _uiState.value.llmTranslation.trim()
-        if (sentence.isBlank() || !llmHelper.isReady()) return
+    /** Selects a reply chip and records the exchange in conversation history. */
+    fun selectReply(reply: String) {
+        _uiState.update { state ->
+            val updatedHistory = (state.conversationHistory +
+                listOf("Signer: ${state.llmTranslation}", "Reply: $reply")
+            ).takeLast(8)
+            state.copy(llmSelectedReply = reply, conversationHistory = updatedHistory)
+        }
+    }
 
-        _uiState.update { it.copy(llmPhase = LlmPhase.REPLYING, llmReply = "") }
+    // ── LLM: gesture suggestion ──────────────────────────────────────────
 
-        val prompt = LlmHelper.replyPrompt(sentence)
-        llmHelper.generateAsync(prompt) { partial, done ->
-            _uiState.update { it.copy(
-                llmReply = it.llmReply + partial,
-                llmPhase = if (done) LlmPhase.REPLIED else LlmPhase.REPLYING
-            )}
+    /** Runs independently — doesn't disturb translation results already shown. */
+    fun suggestGestures(phrase: String) {
+        if (phrase.isBlank() || !llmHelper.isReady()) return
+        val state = _uiState.value
+        if (state.llmPhase == LlmPhase.TRANSLATING || state.isSuggesting) return
+
+        viewModelScope.launch(Dispatchers.IO) {
+            _uiState.update { it.copy(isSuggesting = true, gestureSuggestion = "") }
+            val response = llmHelper.generateSync(LlmHelper.gestureSuggestionPrompt(phrase))
+            _uiState.update { it.copy(isSuggesting = false, gestureSuggestion = response.trim()) }
         }
     }
 
