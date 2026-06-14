@@ -10,3 +10,6 @@
 local.properties
 *.wav
 /app/build/
+# Large model files — add manually to assets/
+*.task
+*.bin
