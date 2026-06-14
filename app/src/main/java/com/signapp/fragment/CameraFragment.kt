@@ -29,6 +29,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.mediapipe.tasks.vision.gesturerecognizer.GestureRecognizerResult
+import com.signapp.LlmPhase
 import com.signapp.MainViewModel
 import com.signapp.OverlayView
 import com.signapp.SignRecognizerHelper
@@ -38,6 +39,10 @@ import java.util.Locale
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 class CameraFragment : Fragment(), SignRecognizerHelper.GestureRecognizerListener {
 
@@ -69,6 +74,9 @@ class CameraFragment : Fragment(), SignRecognizerHelper.GestureRecognizerListene
     private var gestureCount = 0
     private val stabilityThreshold = 4
     private var committedGesture = ""
+
+    // Auto-translate: fires 2 seconds after the last committed gesture
+    private var autoTranslateJob: Job? = null
 
     override fun onResume() {
         super.onResume()
@@ -111,7 +119,10 @@ class CameraFragment : Fragment(), SignRecognizerHelper.GestureRecognizerListene
                         onCopy = { copyToClipboard(uiState.sessionText) },
                         onShare = { shareSession(uiState.sessionText) },
                         onTranslate = { viewModel.translateSession() },
-                        onGenerateReply = { viewModel.generateReply() }
+                        onSelectReply = { viewModel.selectReply(it) },
+                        onCopyReply = { copyToClipboard(it) },
+                        onSpeakReply = { speakSession(it) },
+                        onSuggestGestures = { viewModel.suggestGestures(it) }
                     )
                 }
             }
@@ -154,6 +165,7 @@ class CameraFragment : Fragment(), SignRecognizerHelper.GestureRecognizerListene
     }
 
     private fun resetSession() {
+        autoTranslateJob?.cancel()
         viewModel.resetSession()
         committedGesture = ""
         resetStability()
@@ -274,6 +286,20 @@ class CameraFragment : Fragment(), SignRecognizerHelper.GestureRecognizerListene
         viewModel.commitGestureToSession(label)
         if (ttsReady) tts.speak(label, TextToSpeech.QUEUE_FLUSH, null, null)
         view?.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+
+        // Auto-translate: restart 2-second countdown each time a new gesture is committed
+        autoTranslateJob?.cancel()
+        autoTranslateJob = lifecycleScope.launch {
+            delay(2_000)
+            val state = viewModel.uiState.value
+            if (state.modelReady &&
+                state.llmPhase != LlmPhase.TRANSLATING &&
+                !state.isSuggesting &&
+                state.sessionWords.any { it.isNotEmpty() }
+            ) {
+                viewModel.translateSession()
+            }
+        }
     }
 
     private fun resetStability() {

@@ -6,23 +6,20 @@ import com.google.mediapipe.tasks.genai.llminference.LlmInference
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.resume
+
 class LlmHelper(private val context: Context) {
 
     private var llm: LlmInference? = null
 
     fun initialize(onProgress: (Float) -> Unit): Boolean {
         if (llm != null) return true
-
-        // 1. Internal storage (already copied on a previous run)
-        // 2. App-specific external storage — push here via adb, no permissions needed:
-        //    adb push gemma-3n-E2B-it-int4.task /sdcard/Android/data/com.signapp/files/
-        // 3. Download from DOWNLOAD_URL if set
         val modelFile = resolveModelFile(onProgress) ?: return false
-
         return try {
             val options = LlmInference.LlmInferenceOptions.builder()
                 .setModelPath(modelFile.absolutePath)
-                .setMaxTokens(300)
+                .setMaxTokens(512)
                 .setMaxTopK(40)
                 .setPreferredBackend(LlmInference.Backend.CPU)
                 .build()
@@ -35,95 +32,115 @@ class LlmHelper(private val context: Context) {
     }
 
     private fun resolveModelFile(onProgress: (Float) -> Unit): File? {
-        // Already in internal storage
         val internal = File(context.filesDir, MODEL_FILENAME)
         if (internal.exists()) { onProgress(1f); return internal }
-
-        // Pushed via adb to app external storage (no permissions needed on Android 10+)
         val external = File(context.getExternalFilesDir(null), MODEL_FILENAME)
         if (external.exists()) { onProgress(1f); return external }
-
-        // Download from URL if configured
         if (DOWNLOAD_URL.isNotBlank()) {
             return if (downloadFromUrl(internal, onProgress)) internal else null
         }
-
-        Log.e(TAG, "Model not found. Push it via adb:\n" +
-            "adb push $MODEL_FILENAME /sdcard/Android/data/${context.packageName}/files/")
+        Log.e(TAG, "Model not found. Push via adb:\nadb push $MODEL_FILENAME /sdcard/Android/data/${context.packageName}/files/")
         return null
     }
 
     fun isReady() = llm != null
 
-    fun generateAsync(prompt: String, onResult: (partial: String, done: Boolean) -> Unit) {
-        val instance = llm
-        if (instance == null) {
-            onResult("[LLM not ready]", true)
-            return
-        }
-        try {
-            instance.generateResponseAsync(prompt) { partial, done ->
-                onResult(partial ?: "", done)
+    /** Suspending, returns full response after generation completes. */
+    suspend fun generateSync(prompt: String): String {
+        val instance = llm ?: return "[LLM not ready]"
+        return suspendCancellableCoroutine { cont ->
+            val buffer = StringBuilder()
+            try {
+                instance.generateResponseAsync(prompt) { partial, done ->
+                    buffer.append(partial ?: "")
+                    if (done) cont.resume(buffer.toString())
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "generateSync failed", e)
+                cont.resume("[Error: ${e.message}]")
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "generateResponseAsync failed", e)
-            onResult("[Error: ${e.message}]", true)
         }
     }
 
-    fun close() {
-        llm?.close()
-        llm = null
-    }
+    fun close() { llm?.close(); llm = null }
 
     private fun downloadFromUrl(target: File, onProgress: (Float) -> Unit): Boolean {
         return try {
-            Log.i(TAG, "Downloading model from $DOWNLOAD_URL")
             val conn = URL(DOWNLOAD_URL).openConnection() as HttpURLConnection
-            conn.connectTimeout = 15_000
-            conn.readTimeout = 0
-            conn.connect()
+            conn.connectTimeout = 15_000; conn.readTimeout = 0; conn.connect()
             val totalBytes = conn.contentLengthLong
             conn.inputStream.use { src ->
                 target.outputStream().use { dst ->
-                    val buf = ByteArray(65_536)
-                    var written = 0L
-                    var n: Int
+                    val buf = ByteArray(65_536); var written = 0L; var n: Int
                     while (src.read(buf).also { n = it } != -1) {
-                        dst.write(buf, 0, n)
-                        written += n
+                        dst.write(buf, 0, n); written += n
                         if (totalBytes > 0) onProgress(written.toFloat() / totalBytes)
                     }
                 }
             }
             true
         } catch (e: Exception) {
-            Log.e(TAG, "Model download failed", e)
-            target.delete()
-            false
+            Log.e(TAG, "Download failed", e); target.delete(); false
         }
     }
 
     companion object {
         private const val TAG = "LlmHelper"
-
         const val MODEL_FILENAME = "gemma-3n-E2B-it-int4.task"
-
-        // Optional: set a direct download URL to fetch the model at first launch
         const val DOWNLOAD_URL = ""
 
-        fun translatePrompt(tokens: List<String>): String =
-            "<start_of_turn>user\n" +
-            "You are an ASL interpreter. Convert these recognized gesture tokens into one natural, fluent English sentence. Output only the sentence.\n\n" +
-            "Tokens: ${tokens.joinToString(", ")}\n" +
-            "<end_of_turn>\n" +
-            "<start_of_turn>model\n"
+        /** Combined translation + intent detection. Includes conversation history for context. */
+        fun translateAndIntentPrompt(tokens: List<String>, history: List<String>): String {
+            val historySection = if (history.isNotEmpty())
+                "Prior conversation:\n${history.takeLast(6).joinToString("\n")}\n\n" else ""
+            return "<start_of_turn>user\n" +
+                "${historySection}ASL gesture tokens: ${tokens.joinToString(", ")}\n\n" +
+                "Reply in EXACTLY this format, nothing else:\n" +
+                "SENTENCE: [one natural English sentence]\n" +
+                "INTENT: [one word: Question/Request/Greeting/Farewell/Statement/Emotion]\n" +
+                "<end_of_turn>\n<start_of_turn>model\n"
+        }
 
-        fun replyPrompt(sentence: String): String =
+        /** Generates 3 reply options — formal, casual, empathetic. */
+        fun replyOptionsPrompt(sentence: String, intent: String): String =
             "<start_of_turn>user\n" +
-            "A person using sign language communicated: \"$sentence\"\n\n" +
-            "Write a short, natural reply a hearing person could say in response. Output only the reply.\n" +
-            "<end_of_turn>\n" +
-            "<start_of_turn>model\n"
+            "A deaf person said: \"$sentence\" (intent: $intent)\n\n" +
+            "Write exactly 3 short replies (max 10 words each):\n" +
+            "1. [formal reply]\n2. [casual reply]\n3. [empathetic reply]\n" +
+            "<end_of_turn>\n<start_of_turn>model\n"
+
+        /** Suggests hand gestures/signs a hearing person can use to respond. */
+        fun gestureSuggestionPrompt(phrase: String): String =
+            "<start_of_turn>user\n" +
+            "A hearing person wants to communicate: \"$phrase\"\n" +
+            "Suggest simple hand gestures or signs they can make. Be brief and practical.\n" +
+            "<end_of_turn>\n<start_of_turn>model\n"
+
+        fun parseTranslationAndIntent(response: String): Pair<String, String> {
+            var sentence = ""; var intent = "Statement"
+            for (line in response.trim().lines()) {
+                if (line.startsWith("SENTENCE:", ignoreCase = true))
+                    sentence = line.substringAfter(":").trim()
+                else if (line.startsWith("INTENT:", ignoreCase = true))
+                    intent = line.substringAfter(":").trim()
+                        .split(" ").first().replaceFirstChar { it.uppercase() }
+            }
+            if (sentence.isBlank())
+                sentence = response.trim().lines().firstOrNull()?.trim() ?: response.trim()
+            return sentence to intent.ifBlank { "Statement" }
+        }
+
+        fun parseReplyOptions(response: String): List<String> {
+            val numbered = response.trim().lines()
+                .filter { it.matches(Regex("^[1-3][.)].+")) }
+                .map { it.replace(Regex("^[1-3][.)]\\s*"), "").trim() }
+                .filter { it.isNotBlank() }
+                .take(3)
+            return numbered.ifEmpty {
+                response.trim().lines()
+                    .map { it.trim() }.filter { it.isNotBlank() }.take(3)
+                    .ifEmpty { listOf(response.trim()) }
+            }
+        }
     }
 }
