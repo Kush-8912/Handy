@@ -117,13 +117,7 @@ class OverlayView(context: Context?, attrs: AttributeSet?) : View(context, attrs
         imageWidth: Int,
         runningMode: RunningMode = RunningMode.LIVE_STREAM
     ) {
-        landmarkSets = try {
-            @Suppress("UNCHECKED_CAST")
-            val method = result.javaClass.getMethod("handLandmarks")
-            method.invoke(result) as? List<List<NormalizedLandmark>> ?: emptyList()
-        } catch (_: Exception) {
-            emptyList()
-        }
+        landmarkSets = result.landmarks()
         this.imageHeight = imageHeight
         this.imageWidth = imageWidth
         scaleFactor = when (runningMode) {

@@ -44,7 +44,5 @@
             app:popUpToInclusive="true" />
     </fragment>
 
-    <fragment
-        android:id="@+id/gallery_fragment"
-        android:label="GalleryFragment" />
+
 </navigation>

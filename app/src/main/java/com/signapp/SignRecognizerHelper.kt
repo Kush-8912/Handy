@@ -102,8 +102,16 @@ class SignRecognizerHelper(
 
         if (result.gestures().isNotEmpty() && result.gestures()[0].isNotEmpty()) {
             val top = result.gestures()[0][0]
-            gesture = top.categoryName() ?: "none"
-            confidence = top.score()
+            val modelGesture = top.categoryName() ?: "none"
+            if (modelGesture.equals("none", ignoreCase = true)) {
+                // Hand detected but no standard gesture — try custom landmark detection
+                val custom = CustomGestureDetector.detect(result)
+                gesture = custom ?: "none"
+                confidence = if (custom != null) 1f else 0f
+            } else {
+                gesture = modelGesture
+                confidence = top.score()
+            }
         } else {
             gesture = "none"
             confidence = 0f

@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<menu xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:id="@+id/action_back_word" android:title="Delete last word" />
-    <item android:id="@+id/action_space"     android:title="Add space" />
-    <item android:id="@+id/action_copy"      android:title="Copy session" />
-    <item android:id="@+id/action_share"     android:title="Share session" />
-</menu>
