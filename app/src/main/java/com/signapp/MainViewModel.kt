@@ -53,11 +53,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val currentMinHandTrackingConfidence: Float get() = _minHandTrackingConfidence
     val currentMinHandPresenceConfidence: Float get() = _minHandPresenceConfidence
 
-    fun setDelegate(delegate: Int) { _delegate = delegate }
-    fun setMinHandDetectionConfidence(c: Float) { _minHandDetectionConfidence = c }
-    fun setMinHandTrackingConfidence(c: Float) { _minHandTrackingConfidence = c }
-    fun setMinHandPresenceConfidence(c: Float) { _minHandPresenceConfidence = c }
-
     // UI state
     private val _uiState = MutableStateFlow(HandyUiState())
     val uiState: StateFlow<HandyUiState> = _uiState.asStateFlow()

@@ -128,9 +128,9 @@ fun HandyScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp)
-                .padding(top = 48.dp, bottom = 32.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
+                .padding(horizontal = 16.dp)
+                .padding(top = 36.dp, bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             HeaderSection(gestureCount = uiState.gestureCount)
 
@@ -204,7 +204,7 @@ private fun HeaderSection(gestureCount: Int) {
         ) {
             Text(
                 text = "HANDY",
-                fontSize = 52.sp,
+                fontSize = 38.sp,
                 fontWeight = FontWeight.ExtraBold,
                 color = HandyColors.TextPrimary,
                 letterSpacing = (-1).sp,
@@ -238,7 +238,7 @@ private fun HeaderSection(gestureCount: Int) {
         // Subtitle sits below, full width, never truncated
         Text(
             text = "Sign Language Recognition",
-            fontSize = 15.sp,
+            fontSize = 13.sp,
             fontWeight = FontWeight.Medium,
             color = HandyColors.TextSecondary
         )
@@ -255,7 +255,7 @@ private fun CameraCard(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(420.dp)
+            .height(360.dp)
             .clip(RoundedCornerShape(28.dp))
             .background(Color(0xFF0A0A0A))
             .border(1.dp, HandyColors.Border, RoundedCornerShape(28.dp))
@@ -357,7 +357,7 @@ private fun PredictionCard(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(200.dp)
+            .height(160.dp)
             .clip(RoundedCornerShape(28.dp))
             .background(
                 brush = Brush.linearGradient(
@@ -367,7 +367,7 @@ private fun PredictionCard(
                 )
             )
             .border(1.dp, HandyColors.Border, RoundedCornerShape(28.dp))
-            .padding(24.dp)
+            .padding(16.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxSize(),
@@ -391,22 +391,22 @@ private fun PredictionCard(
                 Spacer(Modifier.height(8.dp))
                 Text(
                     text = gesture,
-                    fontSize = 32.sp,
+                    fontSize = 24.sp,
                     fontWeight = FontWeight.ExtraBold,
                     color = HandyColors.TextPrimary,
                     maxLines = 2,
-                    lineHeight = 36.sp,
+                    lineHeight = 28.sp,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.scale(gestureScale)
                 )
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(4.dp))
                 Row(
                     verticalAlignment = Alignment.Bottom,
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Text(
                         text = if (confidence > 0f) "${(confidence * 100).toInt()}%" else "—",
-                        fontSize = 32.sp,
+                        fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
                         color = HandyColors.Accent
                     )
@@ -430,7 +430,7 @@ private fun PredictionCard(
             )
             Box(
                 modifier = Modifier
-                    .size(120.dp)
+                    .size(90.dp)
                     .drawBehind {
                         drawCircle(HandyColors.Accent.copy(alpha = 0.06f * glowAlpha), radius = size.minDimension / 2 + 20.dp.toPx())
                         drawCircle(HandyColors.Accent.copy(alpha = 0.10f * glowAlpha), radius = size.minDimension / 2 + 10.dp.toPx())
@@ -450,7 +450,7 @@ private fun PredictionCard(
             ) {
                 GestureIcon(
                     active = active,
-                    modifier = Modifier.size(52.dp)
+                    modifier = Modifier.size(40.dp)
                 )
             }
         }
@@ -465,9 +465,9 @@ private fun SessionCard(sessionText: String, gestureCount: Int) {
             .clip(RoundedCornerShape(28.dp))
             .background(HandyColors.Surface)
             .border(1.dp, HandyColors.Border, RoundedCornerShape(28.dp))
-            .padding(24.dp)
+            .padding(16.dp)
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -490,9 +490,9 @@ private fun SessionCard(sessionText: String, gestureCount: Int) {
             }
             Text(
                 text = sessionText.ifBlank { "—" },
-                fontSize = 16.sp,
+                fontSize = 14.sp,
                 fontWeight = FontWeight.Medium,
-                lineHeight = 26.sp,
+                lineHeight = 22.sp,
                 color = if (sessionText.isBlank()) HandyColors.TextSecondary.copy(alpha = 0.3f)
                         else HandyColors.TextPrimary
             )
@@ -631,7 +631,7 @@ private fun LlmResultCard(
                 )
             )
             .border(1.dp, HandyColors.Accent.copy(alpha = 0.18f), RoundedCornerShape(28.dp))
-            .padding(24.dp)
+            .padding(16.dp)
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
 
@@ -687,10 +687,10 @@ private fun LlmResultCard(
             }
             Text(
                 text = displayText,
-                fontSize = 18.sp,
+                fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = HandyColors.TextPrimary,
-                lineHeight = 26.sp
+                lineHeight = 22.sp
             )
 
             // ── Reply chips section ─────────────────────────────────────────
@@ -875,7 +875,7 @@ private fun GestureSuggestionCard(
             .clip(RoundedCornerShape(28.dp))
             .background(HandyColors.Surface)
             .border(1.dp, HandyColors.Border, RoundedCornerShape(28.dp))
-            .padding(24.dp)
+            .padding(16.dp)
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(

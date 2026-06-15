@@ -4,8 +4,6 @@ import android.content.Context
 import android.util.Log
 import com.google.mediapipe.tasks.genai.llminference.LlmInference
 import java.io.File
-import java.net.HttpURLConnection
-import java.net.URL
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 
@@ -36,9 +34,6 @@ class LlmHelper(private val context: Context) {
         if (internal.exists()) { onProgress(1f); return internal }
         val external = File(context.getExternalFilesDir(null), MODEL_FILENAME)
         if (external.exists()) { onProgress(1f); return external }
-        if (DOWNLOAD_URL.isNotBlank()) {
-            return if (downloadFromUrl(internal, onProgress)) internal else null
-        }
         Log.e(TAG, "Model not found. Push via adb:\nadb push $MODEL_FILENAME /sdcard/Android/data/${context.packageName}/files/")
         return null
     }
@@ -64,30 +59,9 @@ class LlmHelper(private val context: Context) {
 
     fun close() { llm?.close(); llm = null }
 
-    private fun downloadFromUrl(target: File, onProgress: (Float) -> Unit): Boolean {
-        return try {
-            val conn = URL(DOWNLOAD_URL).openConnection() as HttpURLConnection
-            conn.connectTimeout = 15_000; conn.readTimeout = 0; conn.connect()
-            val totalBytes = conn.contentLengthLong
-            conn.inputStream.use { src ->
-                target.outputStream().use { dst ->
-                    val buf = ByteArray(65_536); var written = 0L; var n: Int
-                    while (src.read(buf).also { n = it } != -1) {
-                        dst.write(buf, 0, n); written += n
-                        if (totalBytes > 0) onProgress(written.toFloat() / totalBytes)
-                    }
-                }
-            }
-            true
-        } catch (e: Exception) {
-            Log.e(TAG, "Download failed", e); target.delete(); false
-        }
-    }
-
     companion object {
         private const val TAG = "LlmHelper"
         const val MODEL_FILENAME = "gemma-3n-E2B-it-int4.task"
-        const val DOWNLOAD_URL = ""
 
         /** Combined translation + intent detection. Includes conversation history for context. */
         fun translateAndIntentPrompt(tokens: List<String>, history: List<String>): String {

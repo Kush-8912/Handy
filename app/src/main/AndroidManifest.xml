@@ -6,7 +6,6 @@
     <dist:module dist:instant="true" /> <!-- Declare features -->
     <uses-feature android:name="android.hardware.camera" /> <!-- Declare permissions -->
     <uses-permission android:name="android.permission.CAMERA" />
-    <uses-permission android:name="android.permission.INTERNET" />
 
     <application
         android:allowBackup="true"
@@ -15,11 +14,8 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:taskAffinity=""
-        android:theme="@style/Theme.SignApp"
+        android:theme="@style/Theme.Handy"
         tools:ignore="AllowBackup">
-        <activity
-            android:name=".fragment.ResultActivity"
-            android:exported="false" />
         <activity
             android:name=".MainActivity"
             android:exported="true">
